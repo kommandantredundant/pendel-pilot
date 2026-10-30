@@ -88,6 +88,40 @@ describe('provider clients', () => {
     assert.deepEqual(result, { durationSec: 124, distanceMeters: 789.5 });
   });
 
+  it('keeps uncached OSRM requests one second apart and serves repeats from the route cache', async () => {
+    const store = new Map<string, Response>();
+    const cache = {
+      async match(request: Request) {
+        return store.get(request.url)?.clone();
+      },
+      async put(request: Request, response: Response) {
+        store.set(request.url, response);
+      }
+    };
+    const requested: string[] = [];
+    const sleeps: number[] = [];
+    const client = new HttpOsrmClient({
+      cache,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      fetchImpl: async (input) => {
+        requested.push(String(input));
+        return Response.json({ routes: [{ duration: 300, distance: 900 }] });
+      }
+    });
+    const from = { lat: 52.52, lon: 13.405 };
+    const to = { lat: 52.5, lon: 13.4 };
+
+    await Promise.all([client.getRouteDuration(from, to, 'foot'), client.getRouteDuration(from, to, 'bike')]);
+    const repeated = await client.getRouteDuration(from, to, 'foot');
+
+    assert.deepEqual(requested.map((url) => new URL(url).pathname.split('/')[1]), ['routed-foot', 'routed-bike']);
+    assert.equal(sleeps.length, 1);
+    assert.ok(sleeps[0] > 900 && sleeps[0] <= 1_000);
+    assert.deepEqual(repeated, { durationSec: 300, distanceMeters: 900 });
+  });
+
   it('maps Photon features only into address geocode fields', async () => {
     const client = new HttpPhotonClient({
       fetchImpl: jsonFetch({

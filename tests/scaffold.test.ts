@@ -14,8 +14,9 @@ describe('backend scaffold', () => {
     assert.match(buildGeocodeUrl('Alexanderplatz', 3).toString(), /\/api\?q=Alexanderplatz&limit=3/);
     assert.match(
       buildRouteUrl({ lat: 52.52, lon: 13.405 }, { lat: 52.5, lon: 13.4 }, 'foot').toString(),
-      /\/route\/v1\/foot\/13\.405,52\.52;13\.4,52\.5\?overview=false/
+      /^https:\/\/routing\.openstreetmap\.de\/routed-foot\/route\/v1\/driving\/13\.405,52\.52;13\.4,52\.5\?overview=false$/
     );
+    assert.match(buildRouteUrl({ lat: 52.52, lon: 13.405 }, { lat: 52.5, lon: 13.4 }, 'bike').pathname, /^\/routed-bike\//);
   });
 
   it('normalizes canonical buffer minute fields to second fields', () => {

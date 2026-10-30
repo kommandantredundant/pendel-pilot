@@ -28,8 +28,8 @@ const PROVIDER_LEGAL_METADATA: Record<ProviderName, Omit<ProviderLegalNotice, 'p
     licenseUrl: 'https://transitous.org/sources/'
   },
   osrm: {
-    name: 'OSRM routing with OpenStreetMap data',
-    termsUrl: 'https://project-osrm.org/docs/',
+    name: 'FOSSGIS OSRM routing with OpenStreetMap data',
+    termsUrl: 'https://routing.openstreetmap.de/about.html',
     licenseUrl: 'https://www.openstreetmap.org/copyright'
   },
   photon: {
@@ -41,7 +41,7 @@ const PROVIDER_LEGAL_METADATA: Record<ProviderName, Omit<ProviderLegalNotice, 'p
 
 export const PROVIDER_POLICIES: Record<ProviderName, ProviderPolicy> = {
   transitous: { attribution: 'Transit data via Transitous (transitous.org/sources); map data © OpenStreetMap contributors', timeoutMs: 4_000 },
-  osrm: { attribution: 'Routing by OSRM; map data © OpenStreetMap contributors', timeoutMs: 2_000 },
+  osrm: { attribution: 'Routing by OSRM (FOSSGIS routing.openstreetmap.de); map data © OpenStreetMap contributors', timeoutMs: 2_000 },
   photon: { attribution: 'Search by Photon; geocoding data © OpenStreetMap contributors', timeoutMs: 5_000 }
 };
 
