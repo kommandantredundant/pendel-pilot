@@ -359,7 +359,7 @@ function buildPage(input: {
 }): RenderedItineraryPage {
   const validationErrors = input.validationErrors ?? input.content.validationErrors;
   const title = input.context.title;
-  const attributions = [PROVIDER_POLICIES.dbTransport.attribution, PROVIDER_POLICIES.osrm.attribution];
+  const attributions = [PROVIDER_POLICIES.transitous.attribution, PROVIDER_POLICIES.osrm.attribution];
   const tier2Expanded = input.tier2Expanded ?? false;
   const tier2ControlId = `${input.context.direction}-tier-2-details`;
   const html = [

@@ -307,9 +307,9 @@ describe('frontend legal surface', () => {
     const page = renderLegalPage();
 
     assert.equal(page.title, 'about-legal');
-    assert.deepEqual(page.providers.map((provider) => provider.provider), ['dbTransport', 'osrm', 'photon']);
+    assert.deepEqual(page.providers.map((provider) => provider.provider), ['transitous', 'osrm', 'photon']);
     assert.deepEqual(page.providers.map((provider) => provider.attribution), [
-      PROVIDER_POLICIES.dbTransport.attribution,
+      PROVIDER_POLICIES.transitous.attribution,
       PROVIDER_POLICIES.osrm.attribution,
       PROVIDER_POLICIES.photon.attribution
     ]);
@@ -454,8 +454,8 @@ describe('frontend itinerary pages from golden fixtures', () => {
   it('renders provider attribution on journey results for transit timing and routing durations', () => {
     const page = renderItineraryPage({ direction: 'journeyWork', status: 'success', journey: journeyWork });
 
-    assert.deepEqual(page.attributions, [PROVIDER_POLICIES.dbTransport.attribution, PROVIDER_POLICIES.osrm.attribution]);
-    assert.equal(page.html.includes(PROVIDER_POLICIES.dbTransport.attribution), true);
+    assert.deepEqual(page.attributions, [PROVIDER_POLICIES.transitous.attribution, PROVIDER_POLICIES.osrm.attribution]);
+    assert.equal(page.html.includes(PROVIDER_POLICIES.transitous.attribution), true);
     assert.equal(page.html.includes(PROVIDER_POLICIES.osrm.attribution), true);
     assert.equal(page.html.includes('data-itinerary-attribution'), true);
   });

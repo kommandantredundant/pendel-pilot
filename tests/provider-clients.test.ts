@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { HttpDbTransportClient } from '../src/clients/dbTransport.client.ts';
+import { HttpTransitousClient } from '../src/clients/transitous.client.ts';
 import { HttpOsrmClient } from '../src/clients/osrm.client.ts';
 import { HttpPhotonClient } from '../src/clients/photon.client.ts';
 import { PENDEL_PILOT_USER_AGENT, PROVIDER_POLICIES, ProviderTimeoutError, requestProviderJson } from '../src/clients/providerCompliance.ts';
@@ -15,51 +15,48 @@ function jsonFetch(payload: unknown, seenHeaders: Headers[] = []): typeof fetch 
 }
 
 describe('provider clients', () => {
-  it('maps DB station search into canonical station identity fields', async () => {
+  it('maps Transitous stop search into canonical station identity fields', async () => {
     const headers: Headers[] = [];
-    const client = new HttpDbTransportClient({
+    const client = new HttpTransitousClient({
       fetchImpl: jsonFetch(
         [
-          {
-            id: '8000105',
-            name: 'Berlin Hbf',
-            location: { latitude: 52.525, longitude: 13.369 },
-            products: { national: true, bus: false, ignored: 'no' }
-          }
+          { type: 'STOP', id: 'de-DELFI_de:11000:900003201', name: 'Berlin Hauptbahnhof', lat: 52.525, lon: 13.369, modes: ['HIGHSPEED_RAIL'] },
+          { type: 'ADDRESS', id: 'addr-1', name: 'Invalidenstraße', lat: 52.52, lon: 13.37 }
         ],
         headers
       )
     });
 
-    const results = await client.searchStations('Berlin Hbf', 1);
+    const results = await client.searchStations('Berlin Hbf', 5);
 
-    assert.deepEqual(results, [
-      {
-        id: '8000105',
-        name: 'Berlin Hbf',
-        lat: 52.525,
-        lon: 13.369,
-        products: { national: true, bus: false }
-      }
-    ]);
+    assert.deepEqual(results, [{ id: 'de-DELFI_de:11000:900003201', name: 'Berlin Hauptbahnhof', lat: 52.525, lon: 13.369 }]);
     assert.equal(headers[0].get('user-agent'), PENDEL_PILOT_USER_AGENT);
   });
 
-  it('maps DB journeys into station y timing anchors and preserves delay metadata', async () => {
-    const client = new HttpDbTransportClient({
+  it('maps Transitous itineraries into station y timing anchors and preserves delay metadata', async () => {
+    const client = new HttpTransitousClient({
       fetchImpl: jsonFetch({
-        journeys: [
+        itineraries: [
           {
+            transfers: 0,
             legs: [
               {
-                origin: { id: '8002549', name: 'Berlin Südkreuz', location: { latitude: 52.475, longitude: 13.365 } },
-                destination: { id: '8000105', name: 'Berlin Hbf', location: { latitude: 52.525, longitude: 13.369 } },
-                departure: '2026-04-10T07:55:00+02:00',
-                arrival: '2026-04-10T08:15:00+02:00',
-                plannedDeparture: '2026-04-10T07:52:00+02:00',
-                plannedArrival: '2026-04-10T08:11:00+02:00',
-                departureDelay: 180,
-                arrivalDelay: 240
+                mode: 'WALK',
+                from: { name: 'Start', lat: 52.47, lon: 13.36 },
+                to: { stopId: 'de-DELFI_a', name: 'Berlin Südkreuz', lat: 52.475, lon: 13.365 },
+                startTime: '2026-04-10T05:45:00Z',
+                endTime: '2026-04-10T05:50:00Z'
+              },
+              {
+                mode: 'SUBURBAN',
+                displayName: 'S2',
+                realTime: true,
+                from: { stopId: 'de-DELFI_a', name: 'Berlin Südkreuz', lat: 52.475, lon: 13.365 },
+                to: { stopId: 'de-DELFI_b', name: 'Berlin Hbf', lat: 52.525, lon: 13.369 },
+                startTime: '2026-04-10T05:55:00Z',
+                endTime: '2026-04-10T06:15:00Z',
+                scheduledStartTime: '2026-04-10T05:52:00Z',
+                scheduledEndTime: '2026-04-10T06:11:00Z'
               }
             ]
           }
@@ -69,15 +66,15 @@ describe('provider clients', () => {
 
     const result = await client.calculateTransport({
       direction: 'journeyWork',
-      fromStationId: '8002549',
-      toStationId: '8000105',
+      fromStationId: 'de-DELFI_a',
+      toStationId: 'de-DELFI_b',
       departureTime: '2026-04-10T07:52:00+02:00'
     });
 
-    assert.equal(result?.departureStation?.id, '8002549');
-    assert.equal(result?.arrivalStation?.id, '8000105');
-    assert.equal(result?.departureTime, '2026-04-10T07:55:00+02:00');
-    assert.equal(result?.arrivalTime, '2026-04-10T08:15:00+02:00');
+    assert.equal(result?.departureStation?.id, 'de-DELFI_a');
+    assert.equal(result?.arrivalStation?.id, 'de-DELFI_b');
+    assert.equal(result?.departureTime, '2026-04-10T05:55:00Z');
+    assert.equal(result?.arrivalTime, '2026-04-10T06:15:00Z');
     assert.equal(result?.delayStatus, 'delayed');
     assert.equal(result?.departureDelaySec, 180);
     assert.equal(result?.arrivalDelaySec, 240);
@@ -118,9 +115,9 @@ describe('provider clients', () => {
   });
 
   it('uses configured provider timeout budgets without shared request state', async () => {
-    assert.equal(PROVIDER_POLICIES.photon.timeoutMs, 1_500);
+    assert.equal(PROVIDER_POLICIES.photon.timeoutMs, 5_000);
     assert.equal(PROVIDER_POLICIES.osrm.timeoutMs, 2_000);
-    assert.equal(PROVIDER_POLICIES.dbTransport.timeoutMs, 2_500);
+    assert.equal(PROVIDER_POLICIES.transitous.timeoutMs, 4_000);
 
     let calls = 0;
     const fetchImpl: typeof fetch = async () => {

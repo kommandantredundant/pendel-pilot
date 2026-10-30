@@ -1,4 +1,4 @@
-import { HttpDbTransportClient } from '../../../src/clients/dbTransport.client.ts';
+import { HttpTransitousClient } from '../../../src/clients/transitous.client.ts';
 import { HttpOsrmClient } from '../../../src/clients/osrm.client.ts';
 import { PROVIDER_POLICIES } from '../../../src/clients/providerCompliance.ts';
 import { explainRequiredPersistedJourneyFields, validatePersistedJourney } from '../../../src/models/localPersistence.ts';
@@ -24,7 +24,7 @@ export const onRequestPost: PagesFunction = async ({ request }) => {
 
   try {
     const serviceTelemetry: JourneyTelemetryEvent[] = [];
-    const data = await new JourneyCalculationService(new HttpDbTransportClient(), new HttpOsrmClient(), (event) =>
+    const data = await new JourneyCalculationService(new HttpTransitousClient(), new HttpOsrmClient(), (event) =>
       serviceTelemetry.push(event)
     ).calculate(body);
     const payload = createItineraryTelemetryPayload({
@@ -51,7 +51,7 @@ export const onRequestPost: PagesFunction = async ({ request }) => {
       telemetryPayload: payload,
       data,
       attribution: {
-        dbTransport: PROVIDER_POLICIES.dbTransport.attribution,
+        transitous: PROVIDER_POLICIES.transitous.attribution,
         osrm: PROVIDER_POLICIES.osrm.attribution
       }
     });

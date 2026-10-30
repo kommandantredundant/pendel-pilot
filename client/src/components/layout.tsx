@@ -46,6 +46,17 @@ export function Layout({ children }: LayoutProps) {
             {children}
           </motion.div>
         </ErrorBoundary>
+        {/* Required by the Transitous usage policy: visible link to its data sources. */}
+        <p className="mt-8 text-center text-xs text-muted-foreground">
+          {t('footer.data', language)}{" "}
+          <a href="https://transitous.org/sources/" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
+            {t('footer.sources', language)}
+          </a>
+          {" "}·{" "}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
+            © OpenStreetMap
+          </a>
+        </p>
       </main>
 
       {/* Bottom Navigation */}

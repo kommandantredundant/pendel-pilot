@@ -1,5 +1,5 @@
-import type { DbTransportClient, TransportSearchInput, TransportSearchResult } from '../clients/dbTransport.client.ts';
-import { StubDbTransportClient } from '../clients/dbTransport.client.ts';
+import type { TransitClient, TransportSearchInput, TransportSearchResult } from '../clients/transit.client.ts';
+import { StubTransitClient } from '../clients/transit.client.ts';
 import type { OsrmClient } from '../clients/osrm.client.ts';
 import { StubOsrmClient } from '../clients/osrm.client.ts';
 import {
@@ -70,7 +70,7 @@ export class JourneyTransportUnavailableError extends Error {
 
 export class JourneyCalculationService {
   constructor(
-    private readonly dbTransportClient: DbTransportClient = new StubDbTransportClient(),
+    private readonly transitClient: TransitClient = new StubTransitClient(),
     private readonly osrmClient: OsrmClient = new StubOsrmClient(),
     private readonly telemetry?: JourneyTelemetrySink
   ) {}
@@ -190,9 +190,9 @@ export class JourneyCalculationService {
       ...(request.excludeLongDistance ? { excludeLongDistance: true } : {})
     };
     const results = request.results ?? 1;
-    const transportConnections: TransportSearchResult[] = this.dbTransportClient.calculateTransportOptions
-      ? await this.dbTransportClient.calculateTransportOptions(input, results)
-      : [await this.dbTransportClient.calculateTransport(input)].filter((connection): connection is TransportSearchResult => connection !== null);
+    const transportConnections: TransportSearchResult[] = this.transitClient.calculateTransportOptions
+      ? await this.transitClient.calculateTransportOptions(input, results)
+      : [await this.transitClient.calculateTransport(input)].filter((connection): connection is TransportSearchResult => connection !== null);
     const complete = transportConnections.filter(
       (connection): connection is RequiredTransportSearchResult => !!connection.departureStation && !!connection.arrivalStation
     );

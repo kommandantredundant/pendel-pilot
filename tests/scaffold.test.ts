@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildStationSearchUrl } from '../src/clients/dbTransport.client.ts';
+import { buildTransitousStopSearchUrl } from '../src/clients/transitous.client.ts';
 import { buildRouteUrl } from '../src/clients/osrm.client.ts';
 import { buildGeocodeUrl } from '../src/clients/photon.client.ts';
 import { normalizeBuffers, validateCalculateJourneyRequest } from '../src/models/canonical.ts';
@@ -10,7 +10,7 @@ import { applyCanonicalJourneyTimes } from '../src/utils/time.ts';
 
 describe('backend scaffold', () => {
   it('keeps provider URL builders importable without calling providers', () => {
-    assert.match(buildStationSearchUrl('Berlin Hbf', 1).toString(), /\/stations\?query=Berlin\+Hbf&limit=1/);
+    assert.match(buildTransitousStopSearchUrl('Berlin Hbf').toString(), /\/api\/v1\/geocode\?text=Berlin\+Hbf&type=STOP/);
     assert.match(buildGeocodeUrl('Alexanderplatz', 3).toString(), /\/api\?q=Alexanderplatz&limit=3/);
     assert.match(
       buildRouteUrl({ lat: 52.52, lon: 13.405 }, { lat: 52.5, lon: 13.4 }, 'foot').toString(),

@@ -1,4 +1,4 @@
-import { type DbTransportClient, type StationSearchResult, StubDbTransportClient } from '../clients/dbTransport.client.ts';
+import { type TransitClient, type StationSearchResult, StubTransitClient } from '../clients/transit.client.ts';
 import type { JourneyTelemetrySink } from './journeyCalculation.service.ts';
 
 export interface StationSearchOptions {
@@ -8,7 +8,7 @@ export interface StationSearchOptions {
 
 export class StationSearchService {
   constructor(
-    private readonly dbTransportClient: DbTransportClient = new StubDbTransportClient(),
+    private readonly transitClient: TransitClient = new StubTransitClient(),
     private readonly telemetry?: JourneyTelemetrySink
   ) {}
 
@@ -21,7 +21,7 @@ export class StationSearchService {
     }
 
     try {
-      const result = await this.dbTransportClient.searchStations(query, limit);
+      const result = await this.transitClient.searchStations(query, limit);
       this.telemetry?.({ event: 'service.fallback_used', metadata: { domain: 'db', direction: 'read', outcome: 'primary' } });
       return result;
     } catch (error) {

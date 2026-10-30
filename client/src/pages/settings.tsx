@@ -200,6 +200,7 @@ export default function SettingsPage() {
           </Select>
           <Button
             type="submit"
+            form="settings-form"
             size="sm"
             disabled={isUpdating}
             className="bg-primary hover:bg-primary/90 text-primary-foreground border-transparent"
@@ -218,7 +219,8 @@ export default function SettingsPage() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* The save button lives in the sticky header, outside this element; it targets the form by id. */}
+        <form id="settings-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           
           {/* Home Settings Card */}
           <Card className="glass-panel border-border/50 shadow-lg rounded-2xl overflow-hidden relative">

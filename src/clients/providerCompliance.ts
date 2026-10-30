@@ -1,4 +1,4 @@
-export type ProviderName = 'dbTransport' | 'osrm' | 'photon';
+export type ProviderName = 'transitous' | 'osrm' | 'photon';
 
 /** Public provider details used in the UI and API attribution responses. */
 export interface ProviderPolicy {
@@ -22,9 +22,10 @@ export interface ProviderRequestOptions {
 }
 
 const PROVIDER_LEGAL_METADATA: Record<ProviderName, Omit<ProviderLegalNotice, 'provider' | 'attribution'>> = {
-  dbTransport: {
-    name: 'DB Transport API',
-    termsUrl: 'https://v6.db.transport.rest/api.html'
+  transitous: {
+    name: 'Transitous (MOTIS) with open transit data',
+    termsUrl: 'https://transitous.org/api/',
+    licenseUrl: 'https://transitous.org/sources/'
   },
   osrm: {
     name: 'OSRM routing with OpenStreetMap data',
@@ -39,9 +40,9 @@ const PROVIDER_LEGAL_METADATA: Record<ProviderName, Omit<ProviderLegalNotice, 'p
 };
 
 export const PROVIDER_POLICIES: Record<ProviderName, ProviderPolicy> = {
-  dbTransport: { attribution: 'Transit data by DB Transport API', timeoutMs: 2_500 },
+  transitous: { attribution: 'Transit data via Transitous (transitous.org/sources); map data © OpenStreetMap contributors', timeoutMs: 4_000 },
   osrm: { attribution: 'Routing by OSRM; map data © OpenStreetMap contributors', timeoutMs: 2_000 },
-  photon: { attribution: 'Search by Photon; geocoding data © OpenStreetMap contributors', timeoutMs: 1_500 }
+  photon: { attribution: 'Search by Photon; geocoding data © OpenStreetMap contributors', timeoutMs: 5_000 }
 };
 
 export function providerLegalNotices(): ProviderLegalNotice[] {

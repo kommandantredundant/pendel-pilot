@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildJourneyUrl, HttpDbTransportClient, type DbTransportClient } from '../src/clients/dbTransport.client.ts';
+import type { TransitClient } from '../src/clients/transit.client.ts';
+import { buildTransitousPlanUrl, HttpTransitousClient } from '../src/clients/transitous.client.ts';
 import type { OsrmClient } from '../src/clients/osrm.client.ts';
 import { validateCalculateJourneyRequest } from '../src/models/canonical.ts';
 import { JourneyCalculationService } from '../src/services/journeyCalculation.service.ts';
@@ -8,14 +9,17 @@ import { JourneyCalculationService } from '../src/services/journeyCalculation.se
 const homeStation = { id: '8002549', name: 'Berlin Südkreuz', location: { latitude: 52.475, longitude: 13.365 } };
 const workStation = { id: '8000105', name: 'Berlin Hbf', location: { latitude: 52.525, longitude: 13.369 } };
 
-function journey(departure: string, arrival: string, lines: string[]) {
+function itinerary(startTime: string, endTime: string, lines: string[]) {
+  const stop = (value: typeof homeStation) => ({ stopId: value.id, name: value.name, lat: value.location.latitude, lon: value.location.longitude });
   return {
-    legs: lines.map((name, index) => ({
-      origin: index === 0 ? homeStation : workStation,
-      destination: workStation,
-      departure,
-      arrival,
-      line: { name }
+    transfers: lines.length - 1,
+    legs: lines.map((displayName, index) => ({
+      mode: 'REGIONAL_RAIL',
+      displayName,
+      from: stop(index === 0 ? homeStation : workStation),
+      to: stop(workStation),
+      startTime,
+      endTime
     }))
   };
 }
@@ -29,34 +33,31 @@ const baseRequest = {
 };
 
 describe('journey options', () => {
-  it('sends exactly one time anchor, the result count, and the long-distance filter to DB Transport', () => {
-    const url = buildJourneyUrl(
-      {
-        direction: 'journeyWork',
-        fromStationId: 'a',
-        toStationId: 'b',
-        departureTime: '2026-04-10T07:52:00+02:00',
-        arrivalTime: '2026-04-10T08:11:00+02:00',
-        excludeLongDistance: true
-      },
+  it('sends exactly one time anchor, the result count, and the long-distance filter to Transitous', () => {
+    const input = { direction: 'journeyWork' as const, fromStationId: 'a', toStationId: 'b' };
+    const departure = buildTransitousPlanUrl(
+      { ...input, departureTime: '2026-04-10T07:52:00+02:00', arrivalTime: '2026-04-10T08:11:00+02:00', excludeLongDistance: true },
       undefined,
       5
     );
+    const arrival = buildTransitousPlanUrl({ ...input, arrivalTime: '2026-04-10T08:11:00+02:00' });
 
-    assert.equal(url.searchParams.get('results'), '5');
-    assert.equal(url.searchParams.get('departure'), '2026-04-10T07:52:00+02:00');
-    assert.equal(url.searchParams.has('arrival'), false);
-    assert.equal(url.searchParams.get('nationalExpress'), 'false');
-    assert.equal(url.searchParams.get('national'), 'false');
+    assert.equal(departure.searchParams.get('numItineraries'), '5');
+    assert.equal(departure.searchParams.get('time'), '2026-04-10T07:52:00+02:00');
+    assert.equal(departure.searchParams.has('arriveBy'), false);
+    assert.doesNotMatch(departure.searchParams.get('transitModes') ?? '', /HIGHSPEED_RAIL|LONG_DISTANCE/);
+    assert.equal(arrival.searchParams.get('time'), '2026-04-10T08:11:00+02:00');
+    assert.equal(arrival.searchParams.get('arriveBy'), 'true');
+    assert.equal(arrival.searchParams.has('transitModes'), false);
   });
 
-  it('maps every DB journey into a connection with line name and transfers', async () => {
-    const client = new HttpDbTransportClient({
+  it('maps every Transitous itinerary into a connection with line name and transfers', async () => {
+    const client = new HttpTransitousClient({
       fetchImpl: async () =>
         Response.json({
-          journeys: [
-            journey('2026-04-10T07:52:00+02:00', '2026-04-10T08:11:00+02:00', ['S 2']),
-            journey('2026-04-10T08:02:00+02:00', '2026-04-10T08:25:00+02:00', ['RE 3', 'S 5'])
+          itineraries: [
+            itinerary('2026-04-10T05:52:00Z', '2026-04-10T06:11:00Z', ['S2']),
+            itinerary('2026-04-10T06:02:00Z', '2026-04-10T06:25:00Z', ['RE3', 'S5'])
           ]
         })
     });
@@ -67,10 +68,10 @@ describe('journey options', () => {
     );
 
     assert.deepEqual(
-      options.map((option) => [option.lineName, option.transfers]),
+      options.map((option) => [option.lineName, option.transfers, option.departureStation.name]),
       [
-        ['S 2', 0],
-        ['RE 3', 1]
+        ['S2', 0, 'Berlin Südkreuz'],
+        ['RE3', 1, 'Berlin Südkreuz']
       ]
     );
   });
@@ -85,7 +86,7 @@ describe('journey options', () => {
   it('calculates a canonical journey per option and reuses first/last-mile routes', async () => {
     let routeRequests = 0;
     const station = (value: typeof homeStation) => ({ id: value.id, name: value.name, lat: value.location.latitude, lon: value.location.longitude });
-    const dbTransportClient: DbTransportClient = {
+    const transitClient: TransitClient = {
       async searchStations() {
         return [];
       },
@@ -108,7 +109,7 @@ describe('journey options', () => {
       }
     };
 
-    const result = await new JourneyCalculationService(dbTransportClient, osrmClient).calculate({
+    const result = await new JourneyCalculationService(transitClient, osrmClient).calculate({
       ...baseRequest,
       departureTime: '2026-04-10T07:50:00+02:00',
       results: 2

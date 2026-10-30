@@ -7,7 +7,7 @@ import { onRequestPost } from '../functions/api/journeys/calculate.ts';
 import { JourneyCalculationService, JourneyTransportUnavailableError, estimateRouteDurationSec } from '../src/services/journeyCalculation.service.ts';
 import { ITINERARY_TELEMETRY_VERSION } from '../src/telemetry/itineraryTelemetry.ts';
 import type { ApiError, ApiSuccess } from '../src/utils/http.ts';
-import type { DbTransportClient } from '../src/clients/dbTransport.client.ts';
+import type { TransitClient } from '../src/clients/transit.client.ts';
 import type { OsrmClient, OsrmProfile } from '../src/clients/osrm.client.ts';
 import {
   CANONICAL_ADDRESS_TIME_FIELDS,
@@ -191,7 +191,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
   });
 
   it('uses provider timing and route durations when calculating the selected canonical journey', async () => {
-    const dbTransportClient: DbTransportClient = {
+    const transitClient: TransitClient = {
       async searchStations() {
         return [];
       },
@@ -223,7 +223,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
       }
     };
 
-    const result = await new JourneyCalculationService(dbTransportClient, osrmClient).calculate(
+    const result = await new JourneyCalculationService(transitClient, osrmClient).calculate(
       fixture<Record<string, unknown>>('calculate.work.request.json')
     );
     const journeyWork = result.calculatedJourneys.journeyWork;
@@ -252,16 +252,18 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (input: URL | RequestInfo) => {
       const url = new URL(input instanceof URL ? input.toString() : typeof input === 'string' ? input : input.url);
-      if (url.pathname === '/journeys') {
+      if (url.pathname === '/api/v5/plan') {
         return Response.json({
-          journeys: [
+          itineraries: [
             {
+              transfers: 0,
               legs: [
                 {
-                  origin: { id: '8002549', name: 'Berlin Südkreuz', location: { latitude: 52.475, longitude: 13.365 } },
-                  destination: { id: '8000105', name: 'Berlin Hbf', location: { latitude: 52.525, longitude: 13.369 } },
-                  departure: '2026-04-10T07:52:00+02:00',
-                  arrival: '2026-04-10T08:11:00+02:00'
+                  mode: 'SUBURBAN',
+                  from: { stopId: '8002549', name: 'Berlin Südkreuz', lat: 52.475, lon: 13.365 },
+                  to: { stopId: '8000105', name: 'Berlin Hbf', lat: 52.525, lon: 13.369 },
+                  startTime: '2026-04-10T07:52:00+02:00',
+                  endTime: '2026-04-10T08:11:00+02:00'
                 }
               ]
             }
@@ -341,7 +343,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
   });
 
   it('fails closed when DB transport cannot provide segment y station anchors', async () => {
-    const dbTransportClient: DbTransportClient = {
+    const transitClient: TransitClient = {
       async searchStations() {
         return [];
       },
@@ -351,7 +353,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
     };
 
     try {
-      await new JourneyCalculationService(dbTransportClient).calculate(fixture<Record<string, unknown>>('calculate.work.request.json'));
+      await new JourneyCalculationService(transitClient).calculate(fixture<Record<string, unknown>>('calculate.work.request.json'));
       throw new Error('Expected missing DB station anchors to fail closed.');
     } catch (error) {
       assert.ok(error instanceof JourneyTransportUnavailableError);
@@ -359,7 +361,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
   });
 
   it('falls back to bounded heuristic route durations when OSRM has no usable route duration', async () => {
-    const dbTransportClient: DbTransportClient = {
+    const transitClient: TransitClient = {
       async searchStations() {
         return [];
       },
@@ -378,7 +380,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
       }
     };
 
-    const result = await new JourneyCalculationService(dbTransportClient, osrmClient).calculate(fixture<Record<string, unknown>>('calculate.work.request.json'));
+    const result = await new JourneyCalculationService(transitClient, osrmClient).calculate(fixture<Record<string, unknown>>('calculate.work.request.json'));
     const journeyWork = result.calculatedJourneys.journeyWork;
 
     if (!journeyWork) {
@@ -415,7 +417,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
 
   it('emits delay propagation anomaly telemetry when segment y delay metadata disagrees with anchors', async () => {
     const delaySignals: string[] = [];
-    const anomalousDbClient: DbTransportClient = {
+    const anomalousDbClient: TransitClient = {
       async searchStations() {
         return [];
       },

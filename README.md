@@ -19,7 +19,7 @@ The project merges two earlier prototypes:
 | `client/` | React UI (Vite, Tailwind, shadcn/ui, wouter, TanStack Query). Built into `dist/`. |
 | `shared/` | Client-side schemas (settings, card model). |
 | `functions/api/` | Cloudflare Pages Functions — the HTTP layer of the backend. |
-| `src/` | Backend services, provider clients (DB Transport, OSRM, Photon), and the canonical journey model. |
+| `src/` | Backend services, provider clients (Transitous, OSRM, Photon), and the canonical journey model. |
 | `tests/` | Backend tests. Client tests live next to their modules as `client/src/**/*.test.ts`. |
 
 ## Setup
