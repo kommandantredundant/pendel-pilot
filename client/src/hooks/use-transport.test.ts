@@ -93,17 +93,23 @@ test("fetchJourneys sends an arrival anchor when planning ahead by arrival time"
   assert.equal(body.departureTime, undefined);
 });
 
-test("toCommuteSuggestion takes leave times from home for journeys to work and from work for journeys home", () => {
+test("toCommuteSuggestion takes leave times from the origin address and arrive times from the destination address", () => {
   const work = toCommuteSuggestion(sampleOption("S 2"), "work");
   assert.equal(work.leaveHomeWalkTime, "2026-04-10T05:31:00.000Z");
   assert.equal(work.walkTimeMinutes, 11);
   assert.equal(work.journey.origin, "Berlin Südkreuz");
   assert.equal(work.journey.delay, 3);
+  assert.equal(work.arriveWalkTime, "2026-04-10T15:15:00.000Z");
+  assert.equal(work.arriveBikeTime, "2026-04-10T15:20:00.000Z");
+  assert.equal(work.arriveWalkMinutes, 9);
+  assert.equal(work.arriveBikeMinutes, 4);
 
   const home = toCommuteSuggestion(sampleOption("S 2", "home"), "home");
   assert.equal(home.leaveHomeWalkTime, "2026-04-10T15:15:00.000Z");
   assert.equal(home.walkTimeMinutes, 9);
   assert.equal(home.journey.origin, "Berlin Hbf");
+  assert.equal(home.arriveWalkTime, "2026-04-10T05:31:00.000Z");
+  assert.equal(home.arriveBikeMinutes, 5);
 });
 
 test("fetchJourneys maps TRANSPORT_DATA_UNAVAILABLE to transport-no-journeys", async () => {

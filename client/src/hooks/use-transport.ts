@@ -49,7 +49,8 @@ interface ApiCalculateResult {
 
 /**
  * Map a canonical backend journey onto the card model. For journeys to work the user leaves home,
- * for journeys home the user leaves work, so the "leave" times come from the matching address side.
+ * for journeys home the user leaves work, so the "leave" times come from the matching address side
+ * and the "arrive" times from the opposite one.
  */
 export function toCommuteSuggestion(option: ApiJourneyOption, destination: "work" | "home"): CommuteSuggestion {
   const j = option.journey;
@@ -74,6 +75,10 @@ export function toCommuteSuggestion(option: ApiJourneyOption, destination: "work
     bikeTimeMinutes: Math.round((destination === "work" ? j.routeHomeBikeSec : j.routeWorkBikeSec) / 60),
     leaveHomeWalkTime: destination === "work" ? j.homeAddressWalkTime : j.workAddressWalkTime,
     leaveHomeBikeTime: destination === "work" ? j.homeAddressBikeTime : j.workAddressBikeTime,
+    arriveWalkMinutes: Math.round((destination === "work" ? j.routeWorkWalkSec : j.routeHomeWalkSec) / 60),
+    arriveBikeMinutes: Math.round((destination === "work" ? j.routeWorkBikeSec : j.routeHomeBikeSec) / 60),
+    arriveWalkTime: destination === "work" ? j.workAddressWalkTime : j.homeAddressWalkTime,
+    arriveBikeTime: destination === "work" ? j.workAddressBikeTime : j.homeAddressBikeTime,
     finalDestinationType: destination,
   };
 }

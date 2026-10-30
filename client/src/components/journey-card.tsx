@@ -21,16 +21,32 @@ interface JourneyCardProps {
     bikeTimeMinutes: number;
     leaveHomeWalkTime: string;
     leaveHomeBikeTime: string;
+    arriveWalkMinutes: number;
+    arriveBikeMinutes: number;
+    arriveWalkTime: string;
+    arriveBikeTime: string;
     finalDestinationType: 'work' | 'home';
   };
   index: number;
 }
 
 export function JourneyCard({ journey, index }: JourneyCardProps) {
-  const { journey: j, leaveHomeWalkTime, leaveHomeBikeTime, walkTimeMinutes, bikeTimeMinutes, finalDestinationType } = journey;
+  const {
+    journey: j,
+    leaveHomeWalkTime,
+    leaveHomeBikeTime,
+    walkTimeMinutes,
+    bikeTimeMinutes,
+    arriveWalkTime,
+    arriveBikeTime,
+    arriveWalkMinutes,
+    arriveBikeMinutes,
+    finalDestinationType,
+  } = journey;
   const DestIcon = finalDestinationType === 'work' ? Briefcase : HomeIcon;
   const { language } = useLanguage();
 
+  const destLabel = finalDestinationType === 'work' ? t('journey.work', language) : t('journey.home', language);
   const isDelayed = !!j.delay && j.delay > 0;
 
   const depTime = parseISO(j.departure);
@@ -109,18 +125,38 @@ export function JourneyCard({ journey, index }: JourneyCardProps) {
           </div>
         </div>
 
-        {/* Right Column: Destination Info — stacked vertically */}
-        <div className="flex flex-col gap-3 flex-1 justify-end sm:justify-center">
-          <div className="flex items-center gap-3 bg-amber-500/8 border border-amber-500/20 rounded-lg px-3 py-2.5">
-            <div className="w-7 h-7 rounded-md bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
-              <DestIcon className="w-4 h-4" />
+        {/* Right Column: Arrival at the destination address — walking and biking the last mile */}
+        <div className="flex flex-col gap-3 flex-1">
+          <div
+            data-testid={`arrive-walk-time-${index}`}
+            className="flex items-center gap-3 bg-emerald-500/8 border border-emerald-500/20 rounded-lg px-3 py-2.5"
+          >
+            <div className="w-7 h-7 rounded-md bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+              <Footprints className="w-4 h-4" />
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-bold font-mono-numbers tracking-tighter leading-none text-foreground">
-                {format(arrTime, "HH:mm")}
+                {format(parseISO(arriveWalkTime), "HH:mm")}
               </span>
-              <span className="text-xs text-muted-foreground mt-0.5">{finalDestinationType === 'work' ? t('journey.work', language) : t('journey.home', language)}</span>
+              <span className="text-xs text-muted-foreground mt-0.5">{arriveWalkMinutes}{t('journey.walk', language)}</span>
             </div>
+            <DestIcon className="w-4 h-4 text-amber-500 ml-auto shrink-0" aria-label={destLabel} />
+          </div>
+
+          <div
+            data-testid={`arrive-bike-time-${index}`}
+            className="flex items-center gap-3 bg-blue-500/8 border border-blue-500/20 rounded-lg px-3 py-2.5"
+          >
+            <div className="w-7 h-7 rounded-md bg-blue-500/15 text-blue-500 flex items-center justify-center shrink-0">
+              <Bike className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold font-mono-numbers tracking-tighter leading-none text-foreground">
+                {format(parseISO(arriveBikeTime), "HH:mm")}
+              </span>
+              <span className="text-xs text-muted-foreground mt-0.5">{arriveBikeMinutes}{t('journey.bike', language)}</span>
+            </div>
+            <DestIcon className="w-4 h-4 text-amber-500 ml-auto shrink-0" aria-label={destLabel} />
           </div>
         </div>
 

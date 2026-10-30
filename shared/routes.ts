@@ -52,6 +52,10 @@ export const commuteSuggestionSchema = z.object({
   bikeTimeMinutes: z.number(),
   leaveHomeWalkTime: z.string(), // ISO date when to leave home walking
   leaveHomeBikeTime: z.string(), // ISO date when to leave home biking
+  arriveWalkMinutes: z.number(), // last mile from the arrival station on foot
+  arriveBikeMinutes: z.number(), // last mile from the arrival station by bike
+  arriveWalkTime: z.string(), // ISO date of arrival at the destination address walking
+  arriveBikeTime: z.string(), // ISO date of arrival at the destination address biking
   finalDestinationType: z.enum(['work', 'home']),
 });
 
