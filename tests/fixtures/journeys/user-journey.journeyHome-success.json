@@ -1,0 +1,16 @@
+{
+  "scenario": "journeyHome-success",
+  "render": {
+    "direction": "journeyHome",
+    "status": "success",
+    "journeyFixture": "journeyHome.response.json",
+    "tier2Expanded": true
+  },
+  "expected": {
+    "state": "success",
+    "routePath": "/to-home",
+    "points": ["workAddress", "workStation", "homeStation", "homeAddress"],
+    "segments": ["z", "y", "x"],
+    "telemetryEvents": ["ui.direction_page.view", "ui.itinerary.state.success"]
+  }
+}

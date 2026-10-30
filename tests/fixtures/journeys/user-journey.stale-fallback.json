@@ -1,0 +1,18 @@
+{
+  "scenario": "stale-fallback",
+  "render": {
+    "direction": "journeyWork",
+    "status": "fallback-stale",
+    "staleJourneyFixture": "journeyWork.response.json",
+    "staleGeneratedAt": "2026-04-10T06:30:00.000Z",
+    "reason": "Primary provider failed; using stale cache.",
+    "tier2Expanded": true
+  },
+  "expected": {
+    "state": "fallback-stale",
+    "routePath": "/to-work",
+    "badges": ["Fallback data", "Stale 2026-04-10T06:30:00.000Z"],
+    "telemetryEvents": ["ui.direction_page.view", "ui.itinerary.state.fallback-stale"],
+    "errorCode": "FALLBACK_STALE"
+  }
+}

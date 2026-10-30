@@ -1,0 +1,48 @@
+{
+  "success": true,
+  "data": {
+    "direction": "home",
+    "transport": null,
+    "routes": {
+      "home": { "walk": null, "bike": null },
+      "work": { "walk": null, "bike": null }
+    },
+    "summary": null,
+    "calculatedJourneys": {
+      "journeyWork": null,
+      "journeyHome": {
+        "direction": "journeyHome",
+        "homeAddress": { "lat": 52.5208, "lon": 13.4095 },
+        "homeStation": { "id": "8002549", "name": "Berlin Südkreuz", "lat": 52.475, "lon": 13.365 },
+        "workStation": { "id": "8000105", "name": "Berlin Hbf", "lat": 52.525, "lon": 13.369 },
+        "workAddress": { "lat": 52.5321, "lon": 13.3849 },
+        "transportHome": {
+          "departureTime": "2026-04-10T15:31:00.000Z",
+          "arrivalTime": "2026-04-10T15:50:00.000Z"
+        },
+        "workStationTime": "2026-04-10T15:31:00.000Z",
+        "homeStationTime": "2026-04-10T15:50:00.000Z",
+        "routeHomeWalkSec": 660,
+        "routeHomeBikeSec": 290,
+        "routeWorkWalkSec": 540,
+        "routeWorkBikeSec": 230,
+        "bufferInsideHomeStationMin": 5,
+        "bufferInsideWorkStationMin": 3,
+        "bufferLeaveHomeMin": 4,
+        "bufferLeaveWorkMin": 6,
+        "bufferPrepareWalkMin": 1,
+        "bufferPrepareBikeMin": 2,
+        "bufferInsideHomeStationSec": 300,
+        "bufferInsideWorkStationSec": 180,
+        "bufferLeaveHomeSec": 240,
+        "bufferLeaveWorkSec": 360,
+        "bufferPrepareWalkSec": 60,
+        "bufferPrepareBikeSec": 120,
+        "homeAddressWalkTime": "2026-04-10T16:06:00.000Z",
+        "homeAddressBikeTime": "2026-04-10T15:59:50.000Z",
+        "workAddressWalkTime": "2026-04-10T15:12:00.000Z",
+        "workAddressBikeTime": "2026-04-10T15:16:10.000Z"
+      }
+    }
+  }
+}

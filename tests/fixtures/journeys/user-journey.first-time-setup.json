@@ -1,0 +1,49 @@
+{
+  "scenario": "first-time-setup",
+  "path": "/settings",
+  "initialSettings": {
+    "profile": null,
+    "bufferPreset": null,
+    "snapshot": null
+  },
+  "settings": {
+    "profile": {
+      "id": "profile-first-time",
+      "name": "First-time Berlin commute",
+      "homeAddress": { "lat": 52.5208, "lon": 13.4095, "label": "Home" },
+      "homeStation": { "id": "8002549", "name": "Berlin Südkreuz", "lat": 52.475, "lon": 13.365 },
+      "workStation": { "id": "8000105", "name": "Berlin Hbf", "lat": 52.525, "lon": 13.369 },
+      "workAddress": { "lat": 52.5321, "lon": 13.3849, "label": "Work" },
+      "defaultDirection": "journeyWork",
+      "createdAt": "2026-04-10T05:00:00.000Z",
+      "updatedAt": "2026-04-10T05:00:00.000Z"
+    },
+    "bufferPreset": {
+      "id": "preset-first-time",
+      "profileId": "profile-first-time",
+      "name": "Default buffers",
+      "bufferInsideHomeStationMin": 5,
+      "bufferInsideWorkStationMin": 3,
+      "bufferLeaveHomeMin": 4,
+      "bufferLeaveWorkMin": 6,
+      "bufferPrepareWalkMin": 1,
+      "bufferPrepareBikeMin": 2,
+      "createdAt": "2026-04-10T05:00:00.000Z",
+      "updatedAt": "2026-04-10T05:00:00.000Z"
+    },
+    "snapshot": {
+      "id": "snapshot-first-time",
+      "profileId": "profile-first-time",
+      "homeAddress": { "lat": 52.5208, "lon": 13.4095, "label": "Home" },
+      "homeStation": { "id": "8002549", "name": "Berlin Südkreuz", "lat": 52.475, "lon": 13.365 },
+      "workStation": { "id": "8000105", "name": "Berlin Hbf", "lat": 52.525, "lon": 13.369 },
+      "workAddress": { "lat": 52.5321, "lon": 13.3849, "label": "Work" },
+      "createdAt": "2026-04-10T05:00:00.000Z"
+    }
+  },
+  "expected": {
+    "settingsState": "settings-ready",
+    "routePath": "/settings",
+    "telemetryEvents": ["itinerary.persistence_write_success", "itinerary.persistence_read_success"]
+  }
+}

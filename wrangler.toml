@@ -1,0 +1,5 @@
+# Cloudflare Pages + Pages Functions configuration.
+# Keep this file aligned with the Pages project settings in Cloudflare.
+name = "pendel-pilot"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-07-06"

@@ -1,0 +1,20 @@
+{
+  "scenario": "address-disambiguation",
+  "path": "/settings#homeAddress",
+  "search": {
+    "field": "homeAddress",
+    "q": "Main Street Springfield",
+    "selectedIndex": 1,
+    "candidates": [
+      { "name": "Main Street", "city": "Springfield", "state": "IL", "country": "United States", "coordinates": { "latitude": 39.8017, "longitude": -89.6436 } },
+      { "name": "Main Street", "city": "Springfield", "state": "MA", "country": "United States", "coordinates": { "latitude": 42.1015, "longitude": -72.5898 } }
+    ]
+  },
+  "expected": {
+    "state": "address-multiple-results",
+    "routePath": "/settings#homeAddress",
+    "selectedMetadataIncludes": "42.1015",
+    "actions": ["Use selected address"],
+    "attributions": ["Search by Photon; geocoding data © OpenStreetMap contributors"]
+  }
+}

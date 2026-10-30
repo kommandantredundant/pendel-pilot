@@ -1,0 +1,17 @@
+{
+  "homeStationId": "8002549",
+  "workStationId": "8000105",
+  "homeAddress": { "latitude": 52.5208, "longitude": 13.4095 },
+  "workAddress": { "latitude": 52.5321, "longitude": 13.3849 },
+  "direction": "home",
+  "departureTime": "2026-04-10T17:31:00+02:00",
+  "arrivalTime": "2026-04-10T17:50:00+02:00",
+  "buffers": {
+    "bufferInsideHomeStation": 5,
+    "bufferInsideWorkStation": 3,
+    "bufferLeaveHome": 4,
+    "bufferLeaveWork": 6,
+    "bufferPrepareWalk": 1,
+    "bufferPrepareBike": 2
+  }
+}

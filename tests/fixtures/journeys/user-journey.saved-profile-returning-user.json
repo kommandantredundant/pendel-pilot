@@ -1,0 +1,46 @@
+{
+  "scenario": "saved-profile-returning-user",
+  "path": "/settings",
+  "settings": {
+    "profile": {
+      "id": "profile-returning",
+      "name": "Returning Berlin commute",
+      "homeAddress": { "lat": 52.5208, "lon": 13.4095, "label": "Home" },
+      "homeStation": { "id": "8002549", "name": "Berlin Südkreuz", "lat": 52.475, "lon": 13.365 },
+      "workStation": { "id": "8000105", "name": "Berlin Hbf", "lat": 52.525, "lon": 13.369 },
+      "workAddress": { "lat": 52.5321, "lon": 13.3849, "label": "Work" },
+      "defaultDirection": "journeyHome",
+      "createdAt": "2026-04-09T18:00:00.000Z",
+      "updatedAt": "2026-04-10T05:20:00.000Z"
+    },
+    "bufferPreset": {
+      "id": "preset-returning",
+      "profileId": "profile-returning",
+      "name": "Returning buffers",
+      "bufferInsideHomeStationMin": 5,
+      "bufferInsideWorkStationMin": 7,
+      "bufferLeaveHomeMin": 4,
+      "bufferLeaveWorkMin": 6,
+      "bufferPrepareWalkMin": 1,
+      "bufferPrepareBikeMin": 2,
+      "createdAt": "2026-04-09T18:00:00.000Z",
+      "updatedAt": "2026-04-10T05:20:00.000Z"
+    },
+    "snapshot": {
+      "id": "snapshot-returning",
+      "profileId": "profile-returning",
+      "homeAddress": { "lat": 52.5208, "lon": 13.4095, "label": "Home" },
+      "homeStation": { "id": "8002549", "name": "Berlin Südkreuz", "lat": 52.475, "lon": 13.365 },
+      "workStation": { "id": "8000105", "name": "Berlin Hbf", "lat": 52.525, "lon": 13.369 },
+      "workAddress": { "lat": 52.5321, "lon": 13.3849, "label": "Work" },
+      "createdAt": "2026-04-10T05:20:00.000Z"
+    }
+  },
+  "persistedJourneyFixtures": ["journeyWork.response.json", "journeyHome.response.json"],
+  "expected": {
+    "settingsState": "settings-ready",
+    "routePath": "/settings",
+    "activeDefaultDirection": "journeyHome",
+    "telemetryEvents": ["itinerary.persistence_write_success", "itinerary.persistence_read_success"]
+  }
+}
