@@ -4,6 +4,17 @@ export interface StationSearchResult extends CanonicalStation {
   products?: Record<string, boolean>;
 }
 
+/** One public-transport leg of a connection, e.g. "RB50" from track 17. */
+export interface TransportLeg {
+  lineName: string;
+  departureTime: string;
+  plannedDepartureTime?: string;
+  /** Only set when the provider has real-time data for this leg. */
+  departureDelaySec?: number;
+  departurePlatform?: string;
+  plannedDeparturePlatform?: string;
+}
+
 export interface TransportConnection extends TransportTiming {
   departureStation: CanonicalStation;
   arrivalStation: CanonicalStation;
@@ -13,6 +24,8 @@ export interface TransportConnection extends TransportTiming {
   /** Current departure track of the first line; differs from the planned one on a track change. */
   departurePlatform?: string;
   plannedDeparturePlatform?: string;
+  /** Every public-transport leg in travel order; the first one matches lineName/departurePlatform. */
+  legs?: TransportLeg[];
 }
 
 export type TransportSearchResult = TransportTiming & Partial<Pick<TransportConnection, 'departureStation' | 'arrivalStation'>>;

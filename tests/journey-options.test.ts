@@ -9,16 +9,22 @@ import { JourneyCalculationService, stationRoutePoint } from '../src/services/jo
 const homeStation = { id: '8002549', name: 'Berlin Südkreuz', location: { latitude: 52.475, longitude: 13.365 } };
 const workStation = { id: '8000105', name: 'Berlin Hbf', location: { latitude: 52.525, longitude: 13.369 } };
 
+function addMinutes(iso: string, minutes: number): string {
+  return new Date(Date.parse(iso) + minutes * 60_000).toISOString();
+}
+
 function itinerary(startTime: string, endTime: string, lines: string[], track?: { track: string; scheduledTrack: string }) {
   const stop = (value: typeof homeStation) => ({ stopId: value.id, name: value.name, lat: value.location.latitude, lon: value.location.longitude });
   return {
     transfers: lines.length - 1,
     legs: lines.map((displayName, index) => ({
       mode: 'REGIONAL_RAIL',
-      displayName,
-      from: { ...stop(index === 0 ? homeStation : workStation), ...(index === 0 ? track : {}) },
+      // The second train runs two minutes late with real-time data.
+      ...(index === 1 ? { realTime: true, scheduledStartTime: startTime, startTime: addMinutes(startTime, 2) } : {}),
+      displayName: `${displayName} (${10_000 + index})`,
+      from: { ...stop(index === 0 ? homeStation : workStation), ...(index === 0 ? track : { track: '8', scheduledTrack: '8' }) },
       to: stop(workStation),
-      startTime,
+      ...(index === 1 ? {} : { startTime }),
       endTime
     }))
   };
@@ -80,6 +86,17 @@ describe('journey options', () => {
         ['RE3', 1, 'Berlin Südkreuz', '7', '5']
       ]
     );
+    assert.deepEqual(options[1].legs, [
+      { lineName: 'RE3', departureTime: '2026-04-10T06:02:00Z', departurePlatform: '7', plannedDeparturePlatform: '5' },
+      {
+        lineName: 'S5',
+        departureTime: '2026-04-10T06:04:00.000Z',
+        plannedDepartureTime: '2026-04-10T06:02:00Z',
+        departureDelaySec: 120,
+        departurePlatform: '8',
+        plannedDeparturePlatform: '8'
+      }
+    ]);
   });
 
   it('accepts either departureTime or arrivalTime and rejects neither', () => {

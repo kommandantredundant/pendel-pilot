@@ -1,4 +1,4 @@
-import type { TransitClient, TransportSearchInput, TransportSearchResult } from '../clients/transit.client.ts';
+import type { TransitClient, TransportLeg, TransportSearchInput, TransportSearchResult } from '../clients/transit.client.ts';
 import { StubTransitClient } from '../clients/transit.client.ts';
 import type { OsrmClient } from '../clients/osrm.client.ts';
 import { StubOsrmClient } from '../clients/osrm.client.ts';
@@ -22,6 +22,7 @@ export interface JourneyOption {
   transfers?: number;
   departurePlatform?: string;
   plannedDeparturePlatform?: string;
+  legs?: TransportLeg[];
 }
 
 export interface JourneyCalculationResult {
@@ -144,7 +145,8 @@ export class JourneyCalculationService {
         ...(transportConnection.departurePlatform ? { departurePlatform: transportConnection.departurePlatform } : {}),
         ...(transportConnection.plannedDeparturePlatform
           ? { plannedDeparturePlatform: transportConnection.plannedDeparturePlatform }
-          : {})
+          : {}),
+        ...(transportConnection.legs?.length ? { legs: transportConnection.legs } : {})
       });
     }
 
@@ -235,6 +237,7 @@ type RequiredTransportSearchResult = TransportSearchResult & {
   transfers?: number;
   departurePlatform?: string;
   plannedDeparturePlatform?: string;
+  legs?: TransportLeg[];
 };
 
 export function estimateRouteDurationSec(from: CanonicalPoint, to: CanonicalPoint, profile: 'foot' | 'bike'): number {

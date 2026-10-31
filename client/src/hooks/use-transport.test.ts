@@ -104,8 +104,25 @@ test("toCommuteSuggestion takes leave times from the origin address and arrive t
   assert.equal(work.walkTimeMinutes, 11);
   assert.equal(work.journey.origin, "Berlin Südkreuz");
   assert.equal(work.journey.delay, 3);
-  assert.equal(work.journey.platform, "7");
-  assert.equal(work.journey.plannedPlatform, "5");
+  assert.deepEqual(work.journey.legs, [
+    {
+      lineName: "S 2",
+      departure: "2026-04-10T05:55:00.000Z",
+      plannedDeparture: "2026-04-10T05:52:00.000Z",
+      delay: 3,
+      platform: "7",
+      plannedPlatform: "5",
+    },
+    // No real-time data for the second train: delay stays unknown instead of "on time".
+    {
+      lineName: "RE1",
+      departure: "2026-04-10T06:05:00.000Z",
+      plannedDeparture: "2026-04-10T06:05:00.000Z",
+      delay: null,
+      platform: "8",
+      plannedPlatform: "8",
+    },
+  ]);
   assert.equal(work.arriveWalkTime, "2026-04-10T15:15:00.000Z");
   assert.equal(work.arriveBikeTime, "2026-04-10T15:20:00.000Z");
   assert.equal(work.arriveWalkMinutes, 9);
@@ -183,6 +200,17 @@ function sampleOption(lineName: string, direction: "work" | "home" = "work") {
     lineName,
     departurePlatform: "7",
     plannedDeparturePlatform: "5",
+    legs: [
+      {
+        lineName,
+        departureTime: "2026-04-10T05:55:00.000Z",
+        plannedDepartureTime: "2026-04-10T05:52:00.000Z",
+        departureDelaySec: 180,
+        departurePlatform: "7",
+        plannedDeparturePlatform: "5",
+      },
+      { lineName: "RE1", departureTime: "2026-04-10T06:05:00.000Z", departurePlatform: "8", plannedDeparturePlatform: "8" },
+    ],
     journey: {
       homeStation: { id: "8002549", name: "Berlin Südkreuz", lat: 52.475, lon: 13.365 },
       workStation: { id: "8000105", name: "Berlin Hbf", lat: 52.525, lon: 13.369 },

@@ -41,8 +41,15 @@ export const journeySchema = z.object({
   plannedDeparture: z.string(),
   plannedArrival: z.string(),
   lineName: z.string(),
-  platform: z.string().optional(), // current departure track
-  plannedPlatform: z.string().optional(), // scheduled departure track
+  // Every train/bus of the connection in travel order, each with its departure time and track
+  legs: z.array(z.object({
+    lineName: z.string(),
+    departure: z.string(), // ISO date, real-time when available
+    plannedDeparture: z.string(),
+    delay: z.number().nullable(), // minutes; null without real-time data
+    platform: z.string().optional(),
+    plannedPlatform: z.string().optional(),
+  })),
 });
 
 /**

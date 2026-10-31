@@ -1,4 +1,5 @@
 import type {
+  TransportLeg,
   TransitClient,
   StationSearchResult,
   TransportConnection,
@@ -104,7 +105,9 @@ function mapItinerary(itinerary: Record<string, unknown>): TransportConnection |
     return null;
   }
 
-  const transitLegs = itinerary.legs.filter(isRecord).filter((leg) => leg.mode !== 'WALK' && isRecord(leg.from) && isRecord(leg.to));
+  const transitLegs = itinerary.legs
+    .filter(isRecord)
+    .filter((leg) => leg.mode !== 'WALK' && isRecord(leg.from) && isRecord(leg.to) && typeof leg.startTime === 'string');
   const firstLeg = transitLegs[0];
   const lastLeg = transitLegs[transitLegs.length - 1];
   if (!firstLeg || !lastLeg || typeof firstLeg.startTime !== 'string' || typeof lastLeg.endTime !== 'string') {
@@ -123,9 +126,8 @@ function mapItinerary(itinerary: Record<string, unknown>): TransportConnection |
   const plannedArrivalTime = stringOrUndefined(lastLeg.scheduledEndTime);
   const departureDelaySec = firstLeg.realTime === true ? delaySeconds(plannedDepartureTime, firstLeg.startTime) : undefined;
   const arrivalDelaySec = lastLeg.realTime === true ? delaySeconds(plannedArrivalTime, lastLeg.endTime) : undefined;
-  const lineName = stringOrUndefined(firstLeg.displayName) ?? stringOrUndefined(firstLeg.routeShortName);
-  const plannedDeparturePlatform = stringOrUndefined(from.scheduledTrack);
-  const departurePlatform = stringOrUndefined(from.track) ?? plannedDeparturePlatform;
+  const legs = transitLegs.map(mapLeg);
+  const { lineName, departurePlatform, plannedDeparturePlatform } = legs[0] ?? {};
 
   return {
     departureStation,
@@ -138,10 +140,34 @@ function mapItinerary(itinerary: Record<string, unknown>): TransportConnection |
     ...(arrivalDelaySec !== undefined ? { arrivalDelaySec } : {}),
     delayStatus: delayStatus(departureDelaySec, arrivalDelaySec),
     ...(lineName ? { lineName } : {}),
+    legs,
     ...(departurePlatform ? { departurePlatform } : {}),
     ...(plannedDeparturePlatform ? { plannedDeparturePlatform } : {}),
     transfers: typeof itinerary.transfers === 'number' ? itinerary.transfers : Math.max(0, transitLegs.length - 1)
   };
+}
+
+function mapLeg(leg: Record<string, unknown>): TransportLeg {
+  const from = leg.from as Record<string, unknown>;
+  const departureTime = String(leg.startTime);
+  const plannedDepartureTime = stringOrUndefined(leg.scheduledStartTime);
+  const departureDelaySec = leg.realTime === true ? delaySeconds(plannedDepartureTime, departureTime) : undefined;
+  const plannedDeparturePlatform = stringOrUndefined(from.scheduledTrack);
+  const departurePlatform = stringOrUndefined(from.track) ?? plannedDeparturePlatform;
+  return {
+    lineName: shortLineName(leg),
+    departureTime,
+    ...(plannedDepartureTime ? { plannedDepartureTime } : {}),
+    ...(departureDelaySec !== undefined ? { departureDelaySec } : {}),
+    ...(departurePlatform ? { departurePlatform } : {}),
+    ...(plannedDeparturePlatform ? { plannedDeparturePlatform } : {})
+  };
+}
+
+/** "RB50 (89955)" → "RB50": drop the trip number MOTIS appends to the display name. */
+function shortLineName(leg: Record<string, unknown>): string {
+  const display = stringOrUndefined(leg.displayName)?.replace(/\s*\([^)]*\)\s*$/, '');
+  return stringOrUndefined(display) ?? stringOrUndefined(leg.routeShortName) ?? String(leg.mode ?? '');
 }
 
 function mapPlace(place: Record<string, unknown>): StationSearchResult | null {

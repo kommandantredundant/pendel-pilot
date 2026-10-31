@@ -40,8 +40,18 @@ interface ApiCanonicalJourney {
   workAddressBikeTime: string;
 }
 
+interface ApiTransportLeg {
+  lineName: string;
+  departureTime: string;
+  plannedDepartureTime?: string;
+  departureDelaySec?: number;
+  departurePlatform?: string;
+  plannedDeparturePlatform?: string;
+}
+
 interface ApiJourneyOption {
   journey: ApiCanonicalJourney;
+  legs?: ApiTransportLeg[];
   lineName?: string;
   transfers?: number;
   departurePlatform?: string;
@@ -75,8 +85,26 @@ export function toCommuteSuggestion(option: ApiJourneyOption, destination: "work
       plannedDeparture: transport.plannedDepartureTime ?? transport.departureTime,
       plannedArrival: transport.plannedArrivalTime ?? transport.arrivalTime,
       lineName: option.lineName ?? "",
-      ...(option.departurePlatform ? { platform: option.departurePlatform } : {}),
-      ...(option.plannedDeparturePlatform ? { plannedPlatform: option.plannedDeparturePlatform } : {}),
+      legs: (option.legs?.length
+        ? option.legs
+        : [
+            {
+              lineName: option.lineName ?? "",
+              departureTime: transport.departureTime,
+              plannedDepartureTime: transport.plannedDepartureTime,
+              departureDelaySec: transport.departureDelaySec,
+              departurePlatform: option.departurePlatform,
+              plannedDeparturePlatform: option.plannedDeparturePlatform,
+            },
+          ]
+      ).map((leg) => ({
+        lineName: leg.lineName,
+        departure: leg.departureTime,
+        plannedDeparture: leg.plannedDepartureTime ?? leg.departureTime,
+        delay: leg.departureDelaySec === undefined ? null : Math.round(leg.departureDelaySec / 60),
+        ...(leg.departurePlatform ? { platform: leg.departurePlatform } : {}),
+        ...(leg.plannedDeparturePlatform ? { plannedPlatform: leg.plannedDeparturePlatform } : {}),
+      })),
     },
     walkTimeMinutes: Math.round((destination === "work" ? j.routeHomeWalkSec : j.routeWorkWalkSec) / 60),
     bikeTimeMinutes: Math.round((destination === "work" ? j.routeHomeBikeSec : j.routeWorkBikeSec) / 60),
