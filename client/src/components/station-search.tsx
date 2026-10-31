@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDebounce } from "use-debounce";
 import { Check, ChevronsUpDown, MapPin, Loader2 } from "lucide-react";
-import { useStationSearch } from "@/hooks/use-transport";
+import { STATION_SEARCH_MIN_CHARS, useStationSearch } from "@/hooks/use-transport";
 import {
   Popover,
   PopoverContent,
@@ -23,7 +23,7 @@ import { useLanguage } from "@/lib/language-context";
 interface StationSearchProps {
   value?: string;
   stationName?: string;
-  onChange: (id: string, name: string) => void;
+  onChange: (id: string, name: string, location?: { latitude: number; longitude: number }) => void;
   placeholder?: string;
 }
 
@@ -55,7 +55,8 @@ export function StationSearch({ value, stationName, onChange, placeholder }: Sta
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 border border-border">
-        <Command>
+        {/* The backend already filters; cmdk's own fuzzy filter would hide e.g. "Kropp" for "Kröp". */}
+        <Command shouldFilter={false}>
           <CommandInput
             placeholder={t('station.search.type', language)}
             value={inputValue}
@@ -68,13 +69,13 @@ export function StationSearch({ value, stationName, onChange, placeholder }: Sta
               </div>
             )}
             
-            {!isLoading && debouncedQuery.length >= 2 && stations?.length === 0 && (
+            {!isLoading && debouncedQuery.length >= STATION_SEARCH_MIN_CHARS && stations?.length === 0 && (
               <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
                 {t('station.search.no-results', language)}
               </CommandEmpty>
             )}
             
-            {!isLoading && debouncedQuery.length < 2 && (
+            {!isLoading && debouncedQuery.length < STATION_SEARCH_MIN_CHARS && (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 {t('station.search.min-chars', language)}
               </div>
@@ -84,9 +85,9 @@ export function StationSearch({ value, stationName, onChange, placeholder }: Sta
               {stations?.map((station) => (
                 <CommandItem
                   key={station.id}
-                  value={station.name}
+                  value={station.id}
                   onSelect={() => {
-                    onChange(station.id, station.name);
+                    onChange(station.id, station.name, station.location);
                     setOpen(false);
                     setInputValue("");
                   }}

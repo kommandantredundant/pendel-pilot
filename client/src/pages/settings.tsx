@@ -255,9 +255,11 @@ export default function SettingsPage() {
                         <StationSearch
                           value={field.value}
                           stationName={form.watch("homeStationName")}
-                          onChange={(id, name) => {
+                          onChange={(id, name, location) => {
                             field.onChange(id);
                             form.setValue("homeStationName", name, { shouldValidate: true });
+                            form.setValue("homeStationLat", location?.latitude);
+                            form.setValue("homeStationLon", location?.longitude);
                           }}
                           placeholder={t('station.search.placeholder', language)}
                         />
@@ -317,9 +319,11 @@ export default function SettingsPage() {
                         <StationSearch
                           value={field.value}
                           stationName={form.watch("workStationName")}
-                          onChange={(id, name) => {
+                          onChange={(id, name, location) => {
                             field.onChange(id);
                             form.setValue("workStationName", name, { shouldValidate: true });
+                            form.setValue("workStationLat", location?.latitude);
+                            form.setValue("workStationLon", location?.longitude);
                           }}
                           placeholder={t('station.search.placeholder', language)}
                         />

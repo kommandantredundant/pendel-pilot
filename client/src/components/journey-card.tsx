@@ -16,6 +16,8 @@ interface JourneyCardProps {
       plannedDeparture: string;
       plannedArrival: string;
       lineName: string;
+      platform?: string;
+      plannedPlatform?: string;
     };
     walkTimeMinutes: number;
     bikeTimeMinutes: number;
@@ -48,6 +50,7 @@ export function JourneyCard({ journey, index }: JourneyCardProps) {
 
   const destLabel = finalDestinationType === 'work' ? t('journey.work', language) : t('journey.home', language);
   const isDelayed = !!j.delay && j.delay > 0;
+  const platformChanged = !!j.platform && !!j.plannedPlatform && j.platform !== j.plannedPlatform;
 
   const depTime = parseISO(j.departure);
   const arrTime = parseISO(j.arrival);
@@ -95,9 +98,9 @@ export function JourneyCard({ journey, index }: JourneyCardProps) {
           </div>
         </div>
 
-        {/* Middle Column: Train Info — centered */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 px-2 py-1">
-          <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2 text-sm">
+        {/* Middle Column: line, train times underneath, then departure track */}
+        <div className="flex flex-col items-center justify-center gap-1.5 px-2 py-1">
+          <div className="flex items-center gap-1.5">
             <div className="bg-secondary px-2 py-0.5 rounded-full border border-border/50 text-xs font-bold text-primary flex items-center gap-1 whitespace-nowrap shadow-sm">
               <Train className="w-3 h-3" />
               {j.lineName}
@@ -123,6 +126,16 @@ export function JourneyCard({ journey, index }: JourneyCardProps) {
               {format(arrTime, "HH:mm")}
             </span>
           </div>
+
+          {j.platform && (
+            <div data-testid={`departure-platform-${index}`} className="text-xs text-muted-foreground">
+              {t('journey.platform', language)}{" "}
+              <span className={cn("font-semibold", platformChanged ? "text-destructive" : "text-foreground/70")}>
+                {j.platform}
+              </span>
+              {platformChanged && <span className="ml-1 line-through opacity-50">{j.plannedPlatform}</span>}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Arrival at the destination address — walking and biking the last mile */}

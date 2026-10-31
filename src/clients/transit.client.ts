@@ -10,6 +10,9 @@ export interface TransportConnection extends TransportTiming {
   /** Name of the first public-transport line, e.g. "RE 1" or "S 5". */
   lineName?: string;
   transfers?: number;
+  /** Current departure track of the first line; differs from the planned one on a track change. */
+  departurePlatform?: string;
+  plannedDeparturePlatform?: string;
 }
 
 export type TransportSearchResult = TransportTiming & Partial<Pick<TransportConnection, 'departureStation' | 'arrivalStation'>>;

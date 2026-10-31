@@ -66,6 +66,7 @@ export const translations = {
     'journey.leave.by': 'Leave by',
     'journey.delayed': 'Delayed by',
     'journey.min': 'min',
+    'journey.platform': 'Platform',
     'journey.walk': 'min walk',
     'journey.bike': 'min bike',
     'journey.work': 'Work',
@@ -73,7 +74,7 @@ export const translations = {
     'station.search.placeholder': 'Search for a station...',
     'station.search.type': 'Type station name...',
     'station.search.no-results': 'No stations found.',
-    'station.search.min-chars': 'Type at least 2 characters...',
+    'station.search.min-chars': 'Type at least 3 characters...',
     // Geocoding errors
     'error.geocoding-network.title': 'Geocoding Service Unavailable',
     'error.geocoding-network.whatIsWrong': 'The address lookup service is not responding',
@@ -205,6 +206,7 @@ export const translations = {
     'journey.leave.by': 'Aufbruch um',
     'journey.delayed': 'Verspätung',
     'journey.min': 'min',
+    'journey.platform': 'Gleis',
     'journey.walk': 'min Fußweg',
     'journey.bike': 'min Radweg',
     'journey.work': 'Arbeit',
@@ -212,7 +214,7 @@ export const translations = {
     'station.search.placeholder': 'Haltestelle suchen...',
     'station.search.type': 'Bahnhofsnamen eingeben...',
     'station.search.no-results': 'Keine Bahnhöfe gefunden.',
-    'station.search.min-chars': 'Gib mindestens 2 Zeichen ein...',
+    'station.search.min-chars': 'Gib mindestens 3 Zeichen ein...',
     // Geocoding errors
     'error.geocoding-network.title': 'Geocoding-Dienst nicht verfügbar',
     'error.geocoding-network.whatIsWrong': 'Der Adresssuchdienst antwortet nicht',

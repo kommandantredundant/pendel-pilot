@@ -20,6 +20,8 @@ export interface JourneyOption {
   journey: CanonicalJourney;
   lineName?: string;
   transfers?: number;
+  departurePlatform?: string;
+  plannedDeparturePlatform?: string;
 }
 
 export interface JourneyCalculationResult {
@@ -90,6 +92,8 @@ export class JourneyCalculationService {
     const workAddress = coordinatesToCanonicalPoint(request.workAddress);
     const transportConnections = await this.resolveRequiredTransportConnections(request);
     const buffers = normalizeBuffers(request.buffers);
+    const homeStationPoint = request.homeStationLocation && coordinatesToCanonicalPoint(request.homeStationLocation);
+    const workStationPoint = request.workStationLocation && coordinatesToCanonicalPoint(request.workStationLocation);
     const routeDurations = new Map<string, Promise<number>>();
     const routeDuration = (from: CanonicalPoint, to: CanonicalPoint, profile: 'foot' | 'bike'): Promise<number> => {
       // Options usually share stations, so each first/last-mile route is requested once per calculation.
@@ -126,17 +130,21 @@ export class JourneyCalculationService {
               workStationTime: transportTiming.departureTime,
               homeStationTime: transportTiming.arrivalTime
             }),
-        routeHomeWalkSec: await routeDuration(homeAddress, homeStation, 'foot'),
-        routeHomeBikeSec: await routeDuration(homeAddress, homeStation, 'bike'),
-        routeWorkWalkSec: await routeDuration(workStation, workAddress, 'foot'),
-        routeWorkBikeSec: await routeDuration(workStation, workAddress, 'bike'),
+        routeHomeWalkSec: await routeDuration(homeAddress, stationRoutePoint(homeStation, homeStationPoint), 'foot'),
+        routeHomeBikeSec: await routeDuration(homeAddress, stationRoutePoint(homeStation, homeStationPoint), 'bike'),
+        routeWorkWalkSec: await routeDuration(stationRoutePoint(workStation, workStationPoint), workAddress, 'foot'),
+        routeWorkBikeSec: await routeDuration(stationRoutePoint(workStation, workStationPoint), workAddress, 'bike'),
         ...buffers
       };
 
       options.push({
         journey: calculateCanonicalJourney(seed),
         ...(transportConnection.lineName ? { lineName: transportConnection.lineName } : {}),
-        ...(transportConnection.transfers !== undefined ? { transfers: transportConnection.transfers } : {})
+        ...(transportConnection.transfers !== undefined ? { transfers: transportConnection.transfers } : {}),
+        ...(transportConnection.departurePlatform ? { departurePlatform: transportConnection.departurePlatform } : {}),
+        ...(transportConnection.plannedDeparturePlatform
+          ? { plannedDeparturePlatform: transportConnection.plannedDeparturePlatform }
+          : {})
       });
     }
 
@@ -225,6 +233,8 @@ type RequiredTransportSearchResult = TransportSearchResult & {
   arrivalStation: CanonicalStation;
   lineName?: string;
   transfers?: number;
+  departurePlatform?: string;
+  plannedDeparturePlatform?: string;
 };
 
 export function estimateRouteDurationSec(from: CanonicalPoint, to: CanonicalPoint, profile: 'foot' | 'bike'): number {
@@ -233,6 +243,20 @@ export function estimateRouteDurationSec(from: CanonicalPoint, to: CanonicalPoin
   const rawEstimate = Math.ceil((distanceMeters * 1.35) / speedMetersPerSecond);
   const maxEstimate = profile === 'foot' ? 3 * 60 * 60 : 90 * 60;
   return Math.max(60, Math.min(maxEstimate, rawEstimate));
+}
+
+// Platforms of one station lie within a few hundred metres; anything further is a different stop (e.g. a bus terminal).
+const SAME_STATION_RADIUS_METERS = 600;
+
+/**
+ * Transit providers report the exact platform of each connection, so routes from platform coordinates
+ * differ per track. Route from the user's chosen station point instead while the connection uses that station.
+ */
+export function stationRoutePoint(platform: CanonicalPoint, chosenStation: CanonicalPoint | undefined): CanonicalPoint {
+  if (chosenStation && haversineMeters(platform, chosenStation) <= SAME_STATION_RADIUS_METERS) {
+    return chosenStation;
+  }
+  return platform;
 }
 
 function coordinatesToCanonicalPoint(coordinates: CalculateJourneyRequest['homeAddress']): CanonicalPoint {

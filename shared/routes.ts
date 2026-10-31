@@ -41,6 +41,8 @@ export const journeySchema = z.object({
   plannedDeparture: z.string(),
   plannedArrival: z.string(),
   lineName: z.string(),
+  platform: z.string().optional(), // current departure track
+  plannedPlatform: z.string().optional(), // scheduled departure track
 });
 
 /**

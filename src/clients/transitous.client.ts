@@ -10,6 +10,11 @@ import { requestProviderJson } from './providerCompliance.ts';
 
 const TRANSITOUS_BASE_URL = 'https://api.transitous.org';
 
+// Stop search is worldwide by default and short prefixes rank e.g. Japanese stops first ("Han" → "Hannō").
+// Restrict suggestions to a box around Germany, Austria and Switzerland (MOTIS: min = south-west, max = north-east).
+const STOP_SEARCH_MIN = '45.8,5.9';
+const STOP_SEARCH_MAX = '55.1,17.2';
+
 // MOTIS transit modes without long-distance rail (ICE/IC/EC, night trains) and long-distance coaches.
 const REGIONAL_TRANSIT_MODES = ['REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'SUBWAY', 'TRAM', 'BUS', 'FERRY'];
 
@@ -62,6 +67,9 @@ export function buildTransitousStopSearchUrl(query: string, baseUrl = TRANSITOUS
   const url = new URL('/api/v1/geocode', baseUrl);
   url.searchParams.set('text', query);
   url.searchParams.set('type', 'STOP');
+  url.searchParams.set('language', 'de');
+  url.searchParams.set('min', STOP_SEARCH_MIN);
+  url.searchParams.set('max', STOP_SEARCH_MAX);
   return url;
 }
 
@@ -116,6 +124,8 @@ function mapItinerary(itinerary: Record<string, unknown>): TransportConnection |
   const departureDelaySec = firstLeg.realTime === true ? delaySeconds(plannedDepartureTime, firstLeg.startTime) : undefined;
   const arrivalDelaySec = lastLeg.realTime === true ? delaySeconds(plannedArrivalTime, lastLeg.endTime) : undefined;
   const lineName = stringOrUndefined(firstLeg.displayName) ?? stringOrUndefined(firstLeg.routeShortName);
+  const plannedDeparturePlatform = stringOrUndefined(from.scheduledTrack);
+  const departurePlatform = stringOrUndefined(from.track) ?? plannedDeparturePlatform;
 
   return {
     departureStation,
@@ -128,6 +138,8 @@ function mapItinerary(itinerary: Record<string, unknown>): TransportConnection |
     ...(arrivalDelaySec !== undefined ? { arrivalDelaySec } : {}),
     delayStatus: delayStatus(departureDelaySec, arrivalDelaySec),
     ...(lineName ? { lineName } : {}),
+    ...(departurePlatform ? { departurePlatform } : {}),
+    ...(plannedDeparturePlatform ? { plannedDeparturePlatform } : {}),
     transfers: typeof itinerary.transfers === 'number' ? itinerary.transfers : Math.max(0, transitLegs.length - 1)
   };
 }

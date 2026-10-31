@@ -60,7 +60,10 @@ test("fetchJourneys throws settings-not-configured error if no local settings ex
 });
 
 test("fetchJourneys posts the saved profile to /api/journeys/calculate and maps every option", async () => {
-  (globalThis as any).window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...sampleSettings, excludeFernverkehr: 1 }));
+  (globalThis as any).window.localStorage.setItem(
+    SETTINGS_KEY,
+    JSON.stringify({ ...sampleSettings, excludeFernverkehr: 1, workStationLat: 52.5219, workStationLon: 13.4132 })
+  );
   let request: { url: string; body: any } | undefined;
   globalThis.fetch = (async (url: string, init: RequestInit) => {
     request = { url, body: JSON.parse(String(init.body)) };
@@ -73,6 +76,8 @@ test("fetchJourneys posts the saved profile to /api/journeys/calculate and maps 
   assert.equal(request?.body.direction, "work");
   assert.deepEqual(request?.body.homeAddress, { latitude: 52.525, longitude: 13.369 });
   assert.equal(request?.body.results, 5);
+  assert.deepEqual(request?.body.workStationLocation, { latitude: 52.5219, longitude: 13.4132 });
+  assert.equal(request?.body.homeStationLocation, undefined);
   assert.equal(request?.body.excludeLongDistance, true);
   assert.deepEqual(request?.body.buffers, { bufferLeaveHome: 2, bufferLeaveWork: 2, bufferPrepareWalk: 5, bufferPrepareBike: 3 });
   assert.ok(request?.body.departureTime);
@@ -99,6 +104,8 @@ test("toCommuteSuggestion takes leave times from the origin address and arrive t
   assert.equal(work.walkTimeMinutes, 11);
   assert.equal(work.journey.origin, "Berlin Südkreuz");
   assert.equal(work.journey.delay, 3);
+  assert.equal(work.journey.platform, "7");
+  assert.equal(work.journey.plannedPlatform, "5");
   assert.equal(work.arriveWalkTime, "2026-04-10T15:15:00.000Z");
   assert.equal(work.arriveBikeTime, "2026-04-10T15:20:00.000Z");
   assert.equal(work.arriveWalkMinutes, 9);
@@ -174,6 +181,8 @@ function sampleOption(lineName: string, direction: "work" | "home" = "work") {
     : { departureTime: "2026-04-10T15:31:00.000Z", arrivalTime: "2026-04-10T15:50:00.000Z" };
   return {
     lineName,
+    departurePlatform: "7",
+    plannedDeparturePlatform: "5",
     journey: {
       homeStation: { id: "8002549", name: "Berlin Südkreuz", lat: 52.475, lon: 13.365 },
       workStation: { id: "8000105", name: "Berlin Hbf", lat: 52.525, lon: 13.369 },

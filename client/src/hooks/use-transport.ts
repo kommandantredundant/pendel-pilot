@@ -4,6 +4,9 @@ import { loadSettings } from "@/lib/settings-storage";
 import { ErrorFactory, isAppError } from "@/lib/app-error";
 import { apiGet, apiPost } from "@/lib/api-client";
 
+/** Transitous returns no stops for one- or two-letter prefixes. */
+export const STATION_SEARCH_MIN_CHARS = 3;
+
 /** Number of connection options requested from /api/journeys/calculate. */
 const JOURNEY_RESULTS = 5;
 
@@ -41,6 +44,8 @@ interface ApiJourneyOption {
   journey: ApiCanonicalJourney;
   lineName?: string;
   transfers?: number;
+  departurePlatform?: string;
+  plannedDeparturePlatform?: string;
 }
 
 interface ApiCalculateResult {
@@ -70,6 +75,8 @@ export function toCommuteSuggestion(option: ApiJourneyOption, destination: "work
       plannedDeparture: transport.plannedDepartureTime ?? transport.departureTime,
       plannedArrival: transport.plannedArrivalTime ?? transport.arrivalTime,
       lineName: option.lineName ?? "",
+      ...(option.departurePlatform ? { platform: option.departurePlatform } : {}),
+      ...(option.plannedDeparturePlatform ? { plannedPlatform: option.plannedDeparturePlatform } : {}),
     },
     walkTimeMinutes: Math.round((destination === "work" ? j.routeHomeWalkSec : j.routeWorkWalkSec) / 60),
     bikeTimeMinutes: Math.round((destination === "work" ? j.routeHomeBikeSec : j.routeWorkBikeSec) / 60),
@@ -87,14 +94,14 @@ export function useStationSearch(query: string) {
   return useQuery({
     queryKey: ["transport", "stations", query],
     queryFn: async (): Promise<Station[]> => {
-      if (!query || query.length < 2) return [];
+      if (!query || query.length < STATION_SEARCH_MIN_CHARS) return [];
 
       const stations = await apiGet<ApiStation[]>("/api/stations/search", { query, limit: 10 }, "transport");
       return stations
         .filter((s) => s.id && s.name)
         .map((s) => ({ id: s.id, name: s.name!, location: { latitude: s.lat, longitude: s.lon } }));
     },
-    enabled: query.length >= 2,
+    enabled: query.length >= STATION_SEARCH_MIN_CHARS,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -123,6 +130,11 @@ function calculateIsoTimestamp(timeString: string): string {
   
   // Convert to ISO8601 format
   return selectedDate.toISOString();
+}
+
+/** Station coordinates exist only for stations picked since they were stored; older profiles omit them. */
+function stationLocation(field: string, latitude: number | undefined, longitude: number | undefined) {
+  return latitude !== undefined && longitude !== undefined ? { [field]: { latitude, longitude } } : {};
 }
 
 export async function fetchJourneys(
@@ -157,6 +169,8 @@ export async function fetchJourneys(
         workStationId: settings.workStationId,
         homeAddress: { latitude: settings.homeLat, longitude: settings.homeLon },
         workAddress: { latitude: settings.workLat, longitude: settings.workLon },
+        ...stationLocation("homeStationLocation", settings.homeStationLat, settings.homeStationLon),
+        ...stationLocation("workStationLocation", settings.workStationLat, settings.workStationLon),
         direction: destination,
         ...time,
         results: JOURNEY_RESULTS,

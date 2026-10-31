@@ -11,6 +11,8 @@ import { applyCanonicalJourneyTimes } from '../src/utils/time.ts';
 describe('backend scaffold', () => {
   it('keeps provider URL builders importable without calling providers', () => {
     assert.match(buildTransitousStopSearchUrl('Berlin Hbf').toString(), /\/api\/v1\/geocode\?text=Berlin\+Hbf&type=STOP/);
+    assert.equal(buildTransitousStopSearchUrl('Han').searchParams.get('min'), '45.8,5.9');
+    assert.equal(buildTransitousStopSearchUrl('Han').searchParams.get('max'), '55.1,17.2');
     assert.match(buildGeocodeUrl('Alexanderplatz', 3).toString(), /\/api\?q=Alexanderplatz&limit=3/);
     assert.match(
       buildRouteUrl({ lat: 52.52, lon: 13.405 }, { lat: 52.5, lon: 13.4 }, 'foot').toString(),

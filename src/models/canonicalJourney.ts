@@ -85,6 +85,12 @@ export interface CalculateJourneyRequest {
   workStationId: string;
   homeAddress: Coordinates;
   workAddress: Coordinates;
+  /**
+   * Coordinates of the stations the user picked. When set, first/last-mile routes start at this
+   * fixed point instead of the platform the transit provider reports for each connection.
+   */
+  homeStationLocation?: Coordinates;
+  workStationLocation?: Coordinates;
   direction: ApiDirection;
   /** At least one of departureTime/arrivalTime is required; departureTime wins when both are sent. */
   departureTime?: string;
@@ -261,6 +267,12 @@ export function validateCalculateJourneyRequest(input: unknown): ValidationResul
   requireString(body, 'workStationId', errors);
   validateCoordinates(body.homeAddress, 'homeAddress', errors);
   validateCoordinates(body.workAddress, 'workAddress', errors);
+  if (body.homeStationLocation !== undefined) {
+    validateCoordinates(body.homeStationLocation, 'homeStationLocation', errors);
+  }
+  if (body.workStationLocation !== undefined) {
+    validateCoordinates(body.workStationLocation, 'workStationLocation', errors);
+  }
 
   if (body.direction !== 'work' && body.direction !== 'home') {
     errors.push({ field: 'direction', message: 'Direction must be either work or home.' });
