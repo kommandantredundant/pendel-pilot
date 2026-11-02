@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Martian+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,55 +7,74 @@
 @layer base {
   :root {
     --font-sans: 'Inter', sans-serif;
-    --font-mono: 'Inter', sans-serif;
+    /* Times, lines and track numbers: a wide technical mono that reads like a departure board */
+    --font-mono: 'Martian Mono', ui-monospace, monospace;
 
-    /* Minimal Light Theme (Replit AI Chat style) */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 15%;
+    /* Light theme: tinted page background so white cards separate without heavy borders */
+    --background: 220 16% 96%;
+    --foreground: 222 22% 14%;
 
-    --card: 0 0% 98%;
-    --card-foreground: 0 0% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 22% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%;
+    --popover-foreground: 222 22% 14%;
 
-    --primary: 348 83% 47%;
+    /* "Bahnhofsschild" blue: brand for header, line signs, active navigation, primary action */
+    --primary: 224 76% 48%;
     --primary-foreground: 0 0% 100%;
+    --primary-tint: 222 100% 95%;
 
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 15%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 222 22% 14%;
 
-    --muted: 0 0% 85%;
-    --muted-foreground: 0 0% 50%;
+    --muted: 220 13% 88%;
+    --muted-foreground: 220 9% 44%;
 
-    --accent: 0 0% 92%;
-    --accent-foreground: 0 0% 15%;
+    --accent: 220 14% 91%;
+    --accent-foreground: 222 22% 14%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 98%;
-    --ring: 348 83% 47%;
+    --border: 220 13% 88%;
+    --input: 220 13% 84%;
+    --ring: 224 76% 48%;
+
+    /*
+     * Punctuality colours from the Okabe-Ito palette (bluish green vs. vermillion): they stay
+     * distinguishable with red-green colour blindness. They never carry meaning alone — late
+     * times also get a struck-through plan time and "+N", on-time times a check mark.
+     */
+    --success: 164 100% 25%;
+    --late: 25 100% 37%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 240 10% 6%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 10%;
-    --popover-foreground: 0 0% 98%;
-    --secondary: 240 10% 16%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 10% 20%;
-    --muted-foreground: 240 5% 60%;
-    --accent: 240 10% 22%;
-    --accent-foreground: 0 0% 98%;
-    --border: 240 10% 18%;
-    --input: 240 10% 18%;
+    --background: 222 24% 7%;
+    --foreground: 220 14% 93%;
+    --card: 222 20% 11%;
+    --card-foreground: 220 14% 93%;
+    --popover: 222 20% 13%;
+    --popover-foreground: 220 14% 93%;
+    --primary: 215 100% 68%;
+    --primary-foreground: 222 24% 7%;
+    --primary-tint: 220 50% 20%;
+    --secondary: 222 16% 18%;
+    --secondary-foreground: 220 14% 93%;
+    --muted: 222 14% 24%;
+    --muted-foreground: 220 9% 64%;
+    --accent: 222 16% 20%;
+    --accent-foreground: 220 14% 93%;
+    --destructive: 0 85% 66%;
+    --destructive-foreground: 222 24% 7%;
+    --border: 222 14% 20%;
+    --input: 222 14% 26%;
+    --ring: 215 100% 68%;
+    --success: 164 70% 50%;
+    --late: 25 100% 62%;
   }
 
   body {

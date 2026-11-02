@@ -140,9 +140,9 @@ export default function SettingsPage() {
       )}
 
       {isCalculatingRoutes && (
-        <Alert className="mb-4 border-blue-500/50 bg-blue-500/10">
-          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-          <AlertDescription className="text-blue-500">
+        <Alert className="mb-4 border-border/70 bg-card">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <AlertDescription className="text-muted-foreground">
             {t('settings.routes.calculating', language)}
           </AlertDescription>
         </Alert>
@@ -157,9 +157,9 @@ export default function SettingsPage() {
       )}
 
       {settings && settings.routingCalculatedAt && (
-        <Alert className="mb-4 border-emerald-500/50 bg-emerald-500/10">
-          <Route className="h-4 w-4 text-emerald-500" />
-          <AlertDescription className="text-emerald-500 flex items-center justify-between">
+        <Alert className="mb-4 border-border/70 bg-card">
+          <Route className="h-4 w-4 text-muted-foreground" />
+          <AlertDescription className="text-muted-foreground text-xs flex items-center justify-between gap-3">
             <span>{t('settings.routes.calculated', language)} {new Date(settings.routingCalculatedAt).toLocaleString()}</span>
             <Button
               type="button"
@@ -167,7 +167,7 @@ export default function SettingsPage() {
               size="sm"
               onClick={handleRecalculateRoutes}
               disabled={isRecalculating || isUpdating}
-              className="ml-4 border-emerald-500/50 hover:bg-emerald-500/20"
+              className="shrink-0"
             >
               {isRecalculating ? (
                 <>
@@ -182,10 +182,10 @@ export default function SettingsPage() {
           </AlertDescription>
         </Alert>
       )}
-      <div className="sticky top-0 z-10 flex items-center justify-between mb-8 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 -mx-2 px-2">
+      <div className="sticky top-12 z-10 flex items-center justify-between mb-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 -mx-2 px-2">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="font-semibold">{t('settings.title', language)}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{t('settings.title', language)}</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -220,18 +220,17 @@ export default function SettingsPage() {
 
       <Form {...form}>
         {/* The save button lives in the sticky header, outside this element; it targets the form by id. */}
-        <form id="settings-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form id="settings-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           
           {/* Home Settings Card */}
-          <Card className="glass-panel border-border/50 shadow-lg rounded-2xl overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50" />
-            <CardHeader className="bg-secondary/30 pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-blue-500" /> {t('settings.home', language)}
+          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MapPin className="w-4 h-4 text-muted-foreground" /> {t('settings.home', language)}
               </CardTitle>
               <CardDescription>{t('settings.home.desc', language)}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 pt-6">
+            <CardContent className="space-y-5">
               <FormField
                 control={form.control}
                 name="homeAddress"
@@ -239,7 +238,7 @@ export default function SettingsPage() {
                   <FormItem>
                       <FormLabel>{t('settings.home.address', language)}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('settings.home.address.placeholder', language)} className="h-12 rounded-xl bg-background/50 border-border/50 focus-visible:ring-blue-500" {...field} />
+                        <Input placeholder={t('settings.home.address.placeholder', language)} className="h-10 rounded-lg bg-card" {...field} />
                       </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -276,7 +275,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>{t('settings.leaving.buffer', language)}</FormLabel>
                     <FormControl>
-                      <Input type="number" step="1" min="0" max="60" className="h-12 rounded-xl bg-background/50 font-mono-numbers" {...field} />
+                      <Input type="number" step="1" min="0" max="60" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
                     </FormControl>
                     <FormDescription className="text-xs">{t('settings.leaving.desc', language)}</FormDescription>
                     <FormMessage />
@@ -287,15 +286,14 @@ export default function SettingsPage() {
           </Card>
 
           {/* Work Settings Card */}
-          <Card className="glass-panel border-border/50 shadow-lg rounded-2xl overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50" />
-            <CardHeader className="bg-secondary/30 pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-emerald-500" /> {t('settings.work', language)}
+          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MapPin className="w-4 h-4 text-muted-foreground" /> {t('settings.work', language)}
               </CardTitle>
               <CardDescription>{t('settings.work.desc', language)}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 pt-6">
+            <CardContent className="space-y-5">
               <FormField
                 control={form.control}
                 name="workAddress"
@@ -303,7 +301,7 @@ export default function SettingsPage() {
                   <FormItem>
                       <FormLabel>{t('settings.work.address', language)}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('settings.work.address.placeholder', language)} className="h-12 rounded-xl bg-background/50 border-border/50 focus-visible:ring-emerald-500" {...field} />
+                        <Input placeholder={t('settings.work.address.placeholder', language)} className="h-10 rounded-lg bg-card" {...field} />
                       </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -339,7 +337,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>{t('settings.leaving.buffer', language)}</FormLabel>
                     <FormControl>
-                      <Input type="number" step="1" min="0" max="60" className="h-12 rounded-xl bg-background/50 font-mono-numbers" {...field} />
+                      <Input type="number" step="1" min="0" max="60" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
                     </FormControl>
                     <FormDescription className="text-xs">{t('settings.leaving.desc', language)}</FormDescription>
                     <FormMessage />
@@ -350,16 +348,15 @@ export default function SettingsPage() {
           </Card>
 
           {/* Speed Profile */}
-          <Card className="glass-panel border-border/50 shadow-lg rounded-2xl overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/50" />
-            <CardHeader className="bg-secondary/30 pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Footprints className="w-5 h-5 text-amber-500" /> {t('settings.speed', language)}
+          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Footprints className="w-4 h-4 text-muted-foreground" /> {t('settings.speed', language)}
               </CardTitle>
               <CardDescription>{t('settings.speed.desc', language)}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <div className="grid sm:grid-cols-2 gap-6">
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="walkBufferMinutes"
@@ -367,15 +364,13 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>{t('settings.walking.buffer', language)}</FormLabel>
                       <FormControl>
-                        <Input type="number" step="1" className="h-12 rounded-xl bg-background/50 font-mono-numbers" {...field} />
+                        <Input type="number" step="1" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
                       </FormControl>
                       <FormDescription className="text-xs">{t('settings.walking.buffer.desc', language)}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-              <div className="grid sm:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="bikeBufferMinutes"
@@ -383,7 +378,7 @@ export default function SettingsPage() {
                     <FormItem>
                       <FormLabel>{t('settings.biking.buffer', language)}</FormLabel>
                       <FormControl>
-                        <Input type="number" step="1" className="h-12 rounded-xl bg-background/50 font-mono-numbers" {...field} />
+                        <Input type="number" step="1" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
                       </FormControl>
                       <FormDescription className="text-xs">{t('settings.biking.buffer.desc', language)}</FormDescription>
                       <FormMessage />
@@ -395,10 +390,10 @@ export default function SettingsPage() {
           </Card>
 
           {/* Train Preferences */}
-          <Card className="border border-border rounded">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" /> {t('settings.trains', language)}
+          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Zap className="w-4 h-4 text-muted-foreground" /> {t('settings.trains', language)}
               </CardTitle>
               <CardDescription>{t('settings.trains.desc', language)}</CardDescription>
             </CardHeader>

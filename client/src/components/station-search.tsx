@@ -43,7 +43,7 @@ export function StationSearch({ value, stationName, onChange, placeholder }: Sta
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-background border-border/50 hover:bg-secondary/50 hover:border-border h-12 rounded-xl text-left font-normal"
+          className="w-full justify-between bg-card border-input hover:bg-secondary/50 h-10 rounded-lg text-left font-normal"
         >
           <div className="flex items-center gap-2 truncate">
             <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />

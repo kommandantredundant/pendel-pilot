@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Settings as SettingsIcon, Train, AlertCircle } from "lucide-react";
+import { Settings as SettingsIcon, Train, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useJourneysWithRefresh } from "@/hooks/use-transport";
 import { useSettings as useUserConfig } from "@/hooks/use-settings";
@@ -108,67 +108,66 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-xs font-medium">Plan ahead:</span>
+    <div className="space-y-5">
+      <header className="space-y-3">
+        {/* The bottom nav already names the direction; the heading shows the actual route. */}
+        <h1 className="text-base font-semibold flex items-center gap-1.5 flex-wrap">
+          <span className="sr-only">{t(destination === "work" ? 'dashboard.work.title' : 'dashboard.home.title', language)}:</span>
+          <span>{destination === "work" ? settings.homeStationName : settings.workStationName}</span>
+          <ArrowRight className="w-4 h-4 shrink-0 text-muted-foreground" aria-hidden />
+          <span>{destination === "work" ? settings.workStationName : settings.homeStationName}</span>
+        </h1>
 
-        <Tabs
-          value={timePlanning}
-          onValueChange={(v) => {
-            if (v === "now") {
-              handleNowClick();
-            } else {
-              handleLaterClick();
-            }
-          }}
-        >
-          <TabsList className="grid grid-cols-2 gap-1 bg-secondary">
-            <TabsTrigger
-              value="now"
-              className="rounded text-xs font-medium data-[state=active]:bg-background"
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('dashboard.plan', language)}>
+            <Tabs
+              value={timePlanning}
+              onValueChange={(v) => {
+                if (v === "now") {
+                  handleNowClick();
+                } else {
+                  handleLaterClick();
+                }
+              }}
             >
-              Now
-            </TabsTrigger>
-            <TabsTrigger
-              value="later"
-              className="rounded text-xs font-medium data-[state=active]:bg-background"
-            >
-              {selectedTime ? `Later: ${selectedTime}` : "Later"}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              <TabsList className="grid grid-cols-2 bg-card border border-border/70 h-9">
+                <TabsTrigger value="now" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  {t('dashboard.now', language)}
+                </TabsTrigger>
+                <TabsTrigger value="later" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  {selectedTime ? `${t('dashboard.later', language)} · ${selectedTime}` : t('dashboard.later', language)}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-        {timePlanning === 'later' && (
-          <Tabs
-            value={arrivalDeparture}
-            onValueChange={(v) => {
-              if (isMountedRef.current) {
-                setArrivalDeparture(v as "arrival" | "departure");
-              }
-            }}
-          >
-            <TabsList className="grid grid-cols-2 gap-1 bg-secondary">
-              <TabsTrigger
-                value="arrival"
-                className="rounded text-xs font-medium data-[state=active]:bg-background"
+            {timePlanning === 'later' && (
+              <Tabs
+                value={arrivalDeparture}
+                onValueChange={(v) => {
+                  if (isMountedRef.current) {
+                    setArrivalDeparture(v as "arrival" | "departure");
+                  }
+                }}
               >
-                {t('dashboard.arrival', language)}
-              </TabsTrigger>
-              <TabsTrigger
-                value="departure"
-                className="rounded text-xs font-medium data-[state=active]:bg-background"
-              >
-                {t('dashboard.departure', language)}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
-        <JourneyRefreshButton
-          onRefresh={refresh}
-          isLoading={isLoadingJourneys}
-          lastUpdated={lastUpdated}
-        />
-      </div>
+                <TabsList className="grid grid-cols-2 bg-card border border-border/70 h-9">
+                  <TabsTrigger value="departure" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    {t('dashboard.departure', language)}
+                  </TabsTrigger>
+                  <TabsTrigger value="arrival" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    {t('dashboard.arrival', language)}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+          </div>
+
+          <JourneyRefreshButton
+            onRefresh={refresh}
+            isLoading={isLoadingJourneys}
+            lastUpdated={lastUpdated}
+          />
+        </div>
+      </header>
       <Timepicker
         ref={timePickerRef}
         value={selectedTime}
@@ -179,7 +178,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
             type: '24h',
           },
           ui: {
-            theme: 'basic',
+            theme: document.documentElement.classList.contains('dark') ? 'dark' : 'basic',
             mobile: window.innerWidth < 768,
             enableSwitchIcon: false,
           },
@@ -205,14 +204,14 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
               exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-40 w-full rounded-2xl bg-card border border-border/50" />)}
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-36 w-full rounded-xl bg-card border border-border/70" />)}
             </motion.div>
           ) : journeys?.length === 0 ? (
             <motion.div 
               key="empty"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="glass-panel rounded-3xl p-12 text-center flex flex-col items-center justify-center border-dashed"
+              className="bg-card rounded-xl border border-dashed border-border p-12 text-center flex flex-col items-center justify-center"
             >
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                 <Train className="w-8 h-8 text-muted-foreground" />
@@ -223,7 +222,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
           ) : (
             <motion.div 
               key="list"
-              className="space-y-5"
+              className="space-y-3"
             >
               {journeys?.map((journey: any, index: number) => (
                 <JourneyCard key={index} journey={journey} index={index} />

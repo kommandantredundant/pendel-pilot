@@ -83,8 +83,8 @@ export function BottomNav() {
     <nav
       className={`
         fixed bottom-0 left-0 right-0 z-50
-        glass-morphism backdrop-blur-lg bg-background/80
-        border-t border-border/50
+        backdrop-blur-lg bg-card/95
+        border-t border-border/70
         transition-transform duration-300 ease-in-out
         ${isKeyboardVisible ? "translate-y-full" : "translate-y-0"}
         pb-safe-area-inset-bottom

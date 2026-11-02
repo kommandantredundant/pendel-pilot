@@ -1,10 +1,11 @@
 import { useLocation } from "wouter";
-import { Train } from "lucide-react";
+import { Train, Monitor, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
 import { BottomNav } from "@/components/bottom-nav";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -19,16 +20,27 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const { language } = useLanguage();
+  const { preference, cycle } = useTheme();
+  const ThemeIcon = preference === "light" ? Sun : preference === "dark" ? Moon : Monitor;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top Navigation Bar */}
-      <nav className="border-b border-border sticky top-0 bg-background z-10">
-        <div className="flex items-center px-4 md:px-8 py-3">
+      <nav className="border-b border-border/70 sticky top-0 bg-card/95 backdrop-blur z-10">
+        <div className="flex items-center px-4 md:px-8 py-3 max-w-4xl mx-auto w-full">
           <div className="flex items-center gap-3">
             <Train className="w-5 h-5 text-primary" />
-            <h1 className="font-semibold text-foreground">{t('app.title', language)}</h1>
+            <span className="font-semibold text-foreground">{t('app.title', language)}</span>
           </div>
+          <button
+            type="button"
+            onClick={cycle}
+            className="ml-auto w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
+            title={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
+          >
+            <ThemeIcon className="w-4 h-4" />
+          </button>
         </div>
       </nav>
 

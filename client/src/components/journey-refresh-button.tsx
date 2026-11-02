@@ -43,7 +43,7 @@ export function JourneyRefreshButton({
         size="sm"
         onClick={onRefresh}
         disabled={isLoading}
-        className="gap-1"
+        className="gap-1 h-9 bg-card"
       >
         <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
         <span className="hidden sm:inline">

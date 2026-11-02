@@ -29,6 +29,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
+          tint: "hsl(var(--primary-tint) / <alpha-value>)",
           border: "var(--primary-border)",
         },
         secondary: {
@@ -52,6 +53,8 @@ export default {
           border: "var(--destructive-border)",
         },
         ring: "hsl(var(--ring) / <alpha-value>)",
+        success: "hsl(var(--success) / <alpha-value>)",
+        late: "hsl(var(--late) / <alpha-value>)",
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
           "2": "hsl(var(--chart-2) / <alpha-value>)",
