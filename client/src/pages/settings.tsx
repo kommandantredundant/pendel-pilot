@@ -103,7 +103,7 @@ export default function SettingsPage() {
         setRoutingError(null);
         // Only redirect if they didn't have settings before (first setup)
         if (!settings) {
-          setLocation("/");
+          setLocation("/towork");
         }
       },
       onError: (error) => {
@@ -489,11 +489,11 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Plan view (desktop) */}
+          {/* Planner view (desktop) */}
           <Card className="bg-card border-border/70 shadow-sm rounded-xl">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <CalendarRange className="w-4 h-4 text-muted-foreground" /> Plan
+                <CalendarRange className="w-4 h-4 text-muted-foreground" /> Planner
               </CardTitle>
               <CardDescription>{t('settings.plan.desc', language)}</CardDescription>
             </CardHeader>

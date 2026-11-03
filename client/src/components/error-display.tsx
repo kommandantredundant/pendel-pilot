@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Settings, Server, Train, MapPin, Route, AlertCircle } from 'lucide-react';
+import { Settings, Server, TrainFront, MapPin, Route, AlertCircle } from 'lucide-react';
 import { AppError, ErrorResponsibility, isAppError } from '@/lib/app-error';
 import type { Language } from '@/lib/i18n';
 import { t } from '@/lib/i18n';
@@ -24,7 +24,7 @@ interface ErrorDisplayProps {
 const responsibilityIcons: Record<ErrorResponsibility, React.ComponentType<{ className?: string }>> = {
   [ErrorResponsibility.USER]: Settings,
   [ErrorResponsibility.SERVER]: Server,
-  [ErrorResponsibility.TRANSPORT_API]: Train,
+  [ErrorResponsibility.TRANSPORT_API]: TrainFront,
   [ErrorResponsibility.GEOCODING_API]: MapPin,
   [ErrorResponsibility.OSRM_API]: Route,
 };

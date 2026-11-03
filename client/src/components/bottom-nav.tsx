@@ -12,9 +12,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: "/andback", labelKey: "nav.home", icon: Home, ariaLabel: "Home" },
-  { path: "/", labelKey: "nav.work", icon: Briefcase, ariaLabel: "Work" },
-  { path: "/how", labelKey: "nav.settings", icon: Settings, ariaLabel: "Settings" },
+  { path: "/tohome", labelKey: "nav.home", icon: Home, ariaLabel: "Home" },
+  { path: "/towork", labelKey: "nav.work", icon: Briefcase, ariaLabel: "Work" },
+  { path: "/settings", labelKey: "nav.settings", icon: Settings, ariaLabel: "Settings" },
 ];
 
 export function BottomNav() {

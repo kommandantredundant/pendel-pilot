@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw, Train } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw, TrainFront } from "lucide-react";
 import type { CommuteSuggestion } from "@shared/routes";
 import { usePlanJourneys, type JourneyAnchor } from "@/hooks/use-transport";
 import { useSettings } from "@/hooks/use-settings";
@@ -89,7 +89,7 @@ function isTypingTarget(event: KeyboardEvent): boolean {
 }
 
 /**
- * Plan: the desktop view for planning ahead. A planning bar (day, departure/arrival, time, long-distance)
+ * Planner: the desktop view for planning ahead. A planning bar (day, departure/arrival, time, long-distance)
  * drives the search; every connection becomes one door-to-door timeline on a shared time axis so they can
  * be compared at a glance. Earlier/Later page through the timetable.
  */
@@ -324,7 +324,7 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
           </div>
         ) : sorted.length === 0 && !isError ? (
           <div className="p-12 text-center flex flex-col items-center gap-3">
-            <Train className="w-8 h-8 text-muted-foreground" aria-hidden />
+            <TrainFront className="w-8 h-8 text-muted-foreground" aria-hidden />
             <p className="font-semibold">{t("dashboard.no-trains.title", language)}</p>
             <p className="text-sm text-muted-foreground">{t("dashboard.no-trains.desc", language)}</p>
           </div>

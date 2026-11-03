@@ -3,7 +3,7 @@ import { arriveTime, leaveTime, type ModePreference, type TravelMode } from "./g
 import type { JourneyAnchor } from "@/hooks/use-transport";
 
 /**
- * Pure helpers for the desktop planning view ("Plan"): door-to-door timeline segments, comparison
+ * Pure helpers for the desktop planning view ("Planner"): door-to-door timeline segments, comparison
  * markers, transfer warnings, the shared time axis, and Europe/Berlin date handling for the planning bar.
  */
 
