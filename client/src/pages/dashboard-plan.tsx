@@ -1,12 +1,11 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Bike, ChevronLeft, ChevronRight, Footprints, RefreshCw, Train } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw, Train } from "lucide-react";
 import type { CommuteSuggestion } from "@shared/routes";
 import { usePlanJourneys, type JourneyAnchor } from "@/hooks/use-transport";
 import { useSettings } from "@/hooks/use-settings";
 import { ErrorDisplay } from "@/components/error-display";
-import { DepartureTime, LinePill } from "@/components/journey-card";
 import { cn } from "@/components/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -32,9 +31,9 @@ import {
   timeAxis,
   timelineModes,
   transferCount,
-  transfers,
   worstTransfer,
   type Lane,
+  type LanedSegment,
   type TimeAxis,
   type TimelineMode,
   type TimelineSegment,
@@ -509,7 +508,6 @@ function PlanRow({
   const missed = timelineModes(mode).every((travelMode) => modeStatus(suggestion, travelMode, now) === "missed");
   const count = transferCount(suggestion);
   const worst = worstTransfer(suggestion);
-  const transferList = transfers(suggestion);
 
   return (
     <li
@@ -542,21 +540,8 @@ function PlanRow({
       )}
 
       {/* Timeline and legs */}
-      <div className="flex flex-col gap-2 min-w-0">
+      <div className="min-w-0">
         {axis && <TimelineBar suggestion={suggestion} mode={mode} axis={axis} now={now} />}
-        <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
-          {suggestion.journey.legs.map((leg, legIndex) => (
-            <Fragment key={legIndex}>
-              {legIndex > 0 && (
-                <TransferChip info={transferList[legIndex - 1]} language={language} />
-              )}
-              <li className="flex items-center gap-1.5">
-                <LinePill leg={leg} platformLabel={t("journey.platform.short", language)} />
-                <DepartureTime leg={leg} onTimeLabel={t("journey.on-time", language)} />
-              </li>
-            </Fragment>
-          ))}
-        </ol>
       </div>
 
       {/* Arrive */}
@@ -634,21 +619,6 @@ function Marker({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TransferChip({ info, language }: { info: TransferInfo | undefined; language: Language }) {
-  if (!info) return <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden />;
-  return (
-    <span
-      className={cn("inline-flex items-center gap-1 text-xs font-mono-numbers", TRANSFER_TEXT[info.status], info.status !== "ok" && "font-semibold")}
-      title={transferLabel(info, language)}
-    >
-      {info.status !== "ok" && <AlertTriangle className="w-3.5 h-3.5" aria-hidden />}
-      <ChevronRight className="w-3.5 h-3.5" aria-hidden />
-      {info.minutes}′
-      <span className="sr-only">{transferLabel(info, language)}</span>
-    </span>
-  );
-}
-
 function segmentTitle(segment: TimelineSegment, language: Language): string {
   const span = `${hhmm(segment.start)}–${hhmm(segment.end)}`;
   switch (segment.kind) {
@@ -674,41 +644,192 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
   const segments = lanedSegments(suggestion, mode);
   const showNow = now > axis.start && now < axis.end;
   const split = mode === "both";
+  const legs = suggestion.journey.legs;
+  const transferSegments = segments.filter((segment): segment is Extract<typeof segment, { kind: "transfer" }> => segment.kind === "transfer");
 
   return (
-    <div className={cn("relative", split ? "h-9" : "h-7")} aria-hidden>
-      {axis.ticks.map((tick) => (
-        <span key={tick} className="absolute inset-y-0 w-px bg-border/70" style={{ left: `${axisPercent(axis, tick)}%` }} />
-      ))}
-      {segments.map((segment, index) => {
-        const left = axisPercent(axis, segment.start);
-        const width = Math.max(axisPercent(axis, segment.end) - left, segment.kind === "transfer" ? 0.6 : 0.3);
-        const way = segment.kind === "access" || segment.kind === "egress";
-        return (
-          <div
-            key={index}
-            title={segmentTitle(segment, language)}
+    <div>
+      {/* Margins hold the labels: departure times above each train, transfer minutes and displaced tracks below. */}
+      <div className={cn("relative mt-4 mb-4", split ? "h-9" : "h-7")}>
+        {axis.ticks.map((tick) => (
+          <span key={tick} className="absolute inset-y-0 w-px bg-border/70" style={{ left: `${axisPercent(axis, tick)}%` }} />
+        ))}
+        {segments.map((segment, index) => {
+          const left = axisPercent(axis, segment.start);
+          const width = Math.max(axisPercent(axis, segment.end) - left, segment.kind === "transfer" ? 0.6 : 0.3);
+          if (segment.kind === "ride") {
+            return (
+              <RideSegment
+                key={index}
+                segment={segment}
+                leg={legs[segment.legIndex]}
+                left={left}
+                width={width}
+                title={segmentTitle(segment, language)}
+                language={language}
+              />
+            );
+          }
+          const way = segment.kind === "access" || segment.kind === "egress";
+          return (
+            <div
+              key={index}
+              aria-hidden
+              title={segmentTitle(segment, language)}
+              className={cn(
+                "absolute overflow-hidden flex items-center justify-center",
+                LANE_CLASS[segment.lane],
+                segment.kind === "access" ? "border-r-2" : "border-l-2",
+                "border-card",
+                way && "bg-muted-foreground/20 text-foreground/70 rounded-[3px]",
+                segment.kind === "transfer" && TRANSFER_TEXT[segment.status],
+                segment.kind === "transfer" && segment.status !== "ok" && "ring-1 ring-inset ring-current rounded-[3px]"
+              )}
+              style={{ left: `${left}%`, width: `${width}%`, ...(segment.kind === "transfer" ? STRIPES : {}) }}
+            >
+              {way && <ModeIcon mode={segment.mode} className={cn("shrink-0", split ? "w-3 h-3" : "w-3.5 h-3.5")} />}
+            </div>
+          );
+        })}
+        {transferSegments.map((segment, index) => (
+          <span
+            key={`transfer-${index}`}
             className={cn(
-              "absolute overflow-hidden flex items-center justify-center",
-              LANE_CLASS[segment.lane],
-              // Hairline gap to the neighbour; way segments end where the train starts, so they get it on the right.
-              segment.kind === "access" ? "border-r-2" : segment.kind === "ride" && segment.legIndex === 0 ? "" : "border-l-2",
-              "border-card",
-              segment.kind === "ride" && "bg-primary text-primary-foreground rounded-[3px]",
-              way && "bg-muted-foreground/20 text-foreground/70 rounded-[3px]",
-              segment.kind === "transfer" && TRANSFER_TEXT[segment.status],
-              segment.kind === "transfer" && segment.status !== "ok" && "ring-1 ring-inset ring-current rounded-[3px]"
+              // Ends where the next train starts, leaving room for that train's displaced track to its right.
+              "absolute top-[calc(100%+3px)] -translate-x-full pr-0.5 inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] leading-none font-mono-numbers",
+              TRANSFER_TEXT[segment.status],
+              segment.status !== "ok" && "font-semibold"
             )}
-            style={{ left: `${left}%`, width: `${width}%`, ...(segment.kind === "transfer" ? STRIPES : {}) }}
+            style={{ left: `${axisPercent(axis, segment.end)}%` }}
+            title={transferLabel(segment, language)}
           >
-            {segment.kind === "ride" && (
-              <span className="px-1 truncate text-[11px] font-mono-numbers font-medium">{segment.lineName}</span>
-            )}
-            {way && <ModeIcon mode={segment.mode} className={cn("shrink-0", split ? "w-3 h-3" : "w-3.5 h-3.5")} />}
-          </div>
-        );
-      })}
-      {showNow && <span className="absolute -top-0.5 -bottom-0.5 w-0.5 bg-hurry rounded-full" style={{ left: `${axisPercent(axis, now)}%` }} />}
+            {segment.status !== "ok" && <AlertTriangle className="w-3 h-3" aria-hidden />}
+            {segment.minutes}′
+            <span className="sr-only">{transferLabel(segment, language)}</span>
+          </span>
+        ))}
+        {showNow && <span className="absolute -top-0.5 -bottom-0.5 w-0.5 bg-hurry rounded-full" style={{ left: `${axisPercent(axis, now)}%` }} />}
+      </div>
     </div>
+  );
+}
+
+type RideSegmentData = Extract<LanedSegment, { kind: "ride" }>;
+type Leg = CommuteSuggestion["journey"]["legs"][number];
+
+/**
+ * One train in the bar: line name (always wins the space) and the track as a light chip. When the
+ * segment is too short for the chip, the track moves below the start of the train.
+ */
+function RideSegment({
+  segment,
+  leg,
+  left,
+  width,
+  title,
+  language,
+}: {
+  segment: RideSegmentData;
+  leg: Leg | undefined;
+  left: number;
+  width: number;
+  title: string;
+  language: Language;
+}) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLSpanElement>(null);
+  const chipRef = useRef<HTMLSpanElement>(null);
+  const chipWidth = useRef(0);
+  const [chipFits, setChipFits] = useState(true);
+  const platformChanged = !!leg?.platform && !!leg.plannedPlatform && leg.platform !== leg.plannedPlatform;
+
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (!box || !leg?.platform) return;
+    const measure = () => {
+      if (chipRef.current) chipWidth.current = chipRef.current.offsetWidth;
+      const needed = (lineRef.current?.scrollWidth ?? 0) + chipWidth.current + 4 /* gap */ + 12 /* padding */;
+      setChipFits(needed <= box.clientWidth);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [leg?.platform, segment.lineName]);
+
+  const platformText = leg?.platform ? `${t("journey.platform.short", language)} ${leg.platform}` : undefined;
+
+  return (
+    <>
+      {leg && (
+        <RideTime leg={leg} left={left} language={language} />
+      )}
+      <div
+        ref={boxRef}
+        title={title}
+        className={cn(
+          "absolute flex items-center gap-1 overflow-hidden px-1.5 bg-primary text-primary-foreground rounded-[3px]",
+          LANE_CLASS[segment.lane],
+          segment.legIndex > 0 && "border-l-2 border-card"
+        )}
+        style={{ left: `${left}%`, width: `${width}%` }}
+      >
+        <span ref={lineRef} className="truncate text-[11px] font-mono-numbers font-semibold">
+          {segment.lineName}
+        </span>
+        {platformText && chipFits && (
+          <span
+            ref={chipRef}
+            className={cn(
+              "shrink-0 whitespace-nowrap rounded-[3px] bg-card/90 px-1 text-[10px] leading-4 font-mono-numbers font-medium",
+              platformChanged ? "text-late" : "text-foreground"
+            )}
+          >
+            {platformText}
+          </span>
+        )}
+      </div>
+      {platformText && !chipFits && (
+        <span
+          className={cn(
+            "absolute top-[calc(100%+3px)] whitespace-nowrap text-[11px] leading-none font-mono-numbers",
+            segment.legIndex > 0 && "pl-1.5", // keeps clear of the transfer minutes ending here
+            platformChanged ? "text-late font-semibold" : "text-muted-foreground"
+          )}
+          style={{ left: `${left}%` }}
+        >
+          {platformText}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** "07:41 ✓" on time, "08:21 +2" late (planned time in the tooltip), plain without real-time data. */
+function RideTime({
+  leg,
+  left,
+  language,
+}: {
+  leg: Leg;
+  left: number;
+  language: Language;
+}) {
+  const late = leg.delay !== null && leg.delay > 0;
+  const onTime = leg.delay === 0;
+  return (
+    <span
+      className={cn(
+        "absolute bottom-[calc(100%+3px)] inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] leading-none font-mono-numbers font-medium",
+        late ? "text-late" : onTime ? "text-success" : "text-foreground/80"
+      )}
+      style={{ left: `${left}%` }}
+      title={late ? `${leg.lineName}: ${hhmm(leg.plannedDeparture)} +${leg.delay}` : onTime ? t("journey.on-time", language) : undefined}
+    >
+      {hhmm(leg.departure)}
+      {late && <span className="font-semibold">+{leg.delay}</span>}
+      {onTime && <Check className="w-3 h-3" strokeWidth={3} aria-hidden />}
+      {late && <span className="sr-only">{t("journey.delayed", language)} {leg.delay} {t("plan.min", language)}</span>}
+    </span>
   );
 }
