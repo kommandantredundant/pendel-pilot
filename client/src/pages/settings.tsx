@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, MapPin, Footprints, Bike, Loader2, Zap, Route, AlertCircle, Eye } from "lucide-react";
+import { Save, MapPin, Footprints, Bike, Loader2, Zap, Route, AlertCircle, Eye, CalendarRange } from "lucide-react";
 import { useLocation } from "wouter";
 import { insertSettingsSchema } from "@shared/client-schema";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
@@ -44,6 +44,7 @@ const formSchema = insertSettingsSchema.extend({
   workLeavingBufferMinutes: z.coerce.number().min(0).max(60),
   excludeFernverkehr: z.coerce.number().min(0).max(1),
   glanceMode: z.coerce.number().min(0).max(1),
+  planMode: z.coerce.number().min(0).max(1),
   stationModeFromHome: z.enum(["walk", "bike", "both"]),
   stationModeFromWork: z.enum(["walk", "bike", "both"]),
   language: z.enum(["en", "de"]).default("en"),
@@ -76,6 +77,7 @@ export default function SettingsPage() {
       workLeavingBufferMinutes: 0,
       excludeFernverkehr: 0,
       glanceMode: 0,
+      planMode: 0,
       stationModeFromHome: "both",
       stationModeFromWork: "both",
       language: "en",
@@ -480,6 +482,36 @@ export default function SettingsPage() {
                     <div className="flex-1">
                       <FormLabel className="cursor-pointer font-medium">{t('settings.glance.enable', language)}</FormLabel>
                       <FormDescription>{t('settings.glance.enable.desc', language)}</FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Plan view (desktop) */}
+          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarRange className="w-4 h-4 text-muted-foreground" /> Plan
+              </CardTitle>
+              <CardDescription>{t('settings.plan.desc', language)}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="planMode"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value === 1}
+                        onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                      />
+                    </FormControl>
+                    <div className="flex-1">
+                      <FormLabel className="cursor-pointer font-medium">{t('settings.plan.enable', language)}</FormLabel>
+                      <FormDescription>{t('settings.plan.enable.desc', language)}</FormDescription>
                     </div>
                   </FormItem>
                 )}

@@ -13,6 +13,13 @@ export interface TransportLeg {
   departureDelaySec?: number;
   departurePlatform?: string;
   plannedDeparturePlatform?: string;
+  /** Arrival at the end of this leg; real-time when available. Used for transfer times and the timeline. */
+  arrivalTime?: string;
+  plannedArrivalTime?: string;
+  arrivalDelaySec?: number;
+  /** Stop names, e.g. the transfer station between two legs. */
+  departureStopName?: string;
+  arrivalStopName?: string;
 }
 
 export interface TransportConnection extends TransportTiming {

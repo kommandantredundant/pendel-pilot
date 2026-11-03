@@ -154,13 +154,24 @@ function mapLeg(leg: Record<string, unknown>): TransportLeg {
   const departureDelaySec = leg.realTime === true ? delaySeconds(plannedDepartureTime, departureTime) : undefined;
   const plannedDeparturePlatform = stringOrUndefined(from.scheduledTrack);
   const departurePlatform = stringOrUndefined(from.track) ?? plannedDeparturePlatform;
+  const to = leg.to as Record<string, unknown>;
+  const arrivalTime = stringOrUndefined(leg.endTime);
+  const plannedArrivalTime = stringOrUndefined(leg.scheduledEndTime);
+  const arrivalDelaySec = leg.realTime === true && arrivalTime ? delaySeconds(plannedArrivalTime, arrivalTime) : undefined;
+  const departureStopName = stringOrUndefined(from.name);
+  const arrivalStopName = stringOrUndefined(to.name);
   return {
     lineName: shortLineName(leg),
     departureTime,
     ...(plannedDepartureTime ? { plannedDepartureTime } : {}),
     ...(departureDelaySec !== undefined ? { departureDelaySec } : {}),
     ...(departurePlatform ? { departurePlatform } : {}),
-    ...(plannedDeparturePlatform ? { plannedDeparturePlatform } : {})
+    ...(plannedDeparturePlatform ? { plannedDeparturePlatform } : {}),
+    ...(arrivalTime ? { arrivalTime } : {}),
+    ...(plannedArrivalTime ? { plannedArrivalTime } : {}),
+    ...(arrivalDelaySec !== undefined ? { arrivalDelaySec } : {}),
+    ...(departureStopName ? { departureStopName } : {}),
+    ...(arrivalStopName ? { arrivalStopName } : {})
   };
 }
 

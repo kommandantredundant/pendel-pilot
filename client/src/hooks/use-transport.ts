@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { CommuteSuggestion, Station } from "@shared/routes";
 import { loadSettings } from "@/lib/settings-storage";
 import { ErrorFactory, isAppError } from "@/lib/app-error";
@@ -47,6 +47,10 @@ interface ApiTransportLeg {
   departureDelaySec?: number;
   departurePlatform?: string;
   plannedDeparturePlatform?: string;
+  arrivalTime?: string;
+  plannedArrivalTime?: string;
+  departureStopName?: string;
+  arrivalStopName?: string;
 }
 
 interface ApiJourneyOption {
@@ -95,6 +99,8 @@ export function toCommuteSuggestion(option: ApiJourneyOption, destination: "work
               departureDelaySec: transport.departureDelaySec,
               departurePlatform: option.departurePlatform,
               plannedDeparturePlatform: option.plannedDeparturePlatform,
+              arrivalTime: transport.arrivalTime,
+              plannedArrivalTime: transport.plannedArrivalTime,
             },
           ]
       ).map((leg) => ({
@@ -104,6 +110,10 @@ export function toCommuteSuggestion(option: ApiJourneyOption, destination: "work
         delay: leg.departureDelaySec === undefined ? null : Math.round(leg.departureDelaySec / 60),
         ...(leg.departurePlatform ? { platform: leg.departurePlatform } : {}),
         ...(leg.plannedDeparturePlatform ? { plannedPlatform: leg.plannedDeparturePlatform } : {}),
+        ...(leg.arrivalTime ? { arrival: leg.arrivalTime } : {}),
+        ...(leg.plannedArrivalTime ? { plannedArrival: leg.plannedArrivalTime } : {}),
+        ...(leg.departureStopName ? { origin: leg.departureStopName } : {}),
+        ...(leg.arrivalStopName ? { destination: leg.arrivalStopName } : {}),
       })),
     },
     walkTimeMinutes: Math.round((destination === "work" ? j.routeHomeWalkSec : j.routeWorkWalkSec) / 60),
@@ -165,11 +175,32 @@ function stationLocation(field: string, latitude: number | undefined, longitude:
   return latitude !== undefined && longitude !== undefined ? { [field]: { latitude, longitude } } : {};
 }
 
+/** Time anchor for a journey search: now, or a fixed departure/arrival instant (ISO 8601). */
+export type JourneyAnchor = { kind: "now" } | { kind: "departure" | "arrival"; time: string };
+
+export interface FetchJourneyOptions {
+  results?: number;
+  /** Overrides the saved "exclude long-distance trains" preference. */
+  excludeLongDistance?: boolean;
+}
+
 export async function fetchJourneys(
   destination: "work" | "home",
   timePlanning: "now" | "later" = "now",
   arrivalDeparture: "arrival" | "departure" = "arrival",
   selectedTime: string = ""
+): Promise<CommuteSuggestion[]> {
+  const anchor: JourneyAnchor =
+    timePlanning === "later" && selectedTime
+      ? { kind: arrivalDeparture, time: calculateIsoTimestamp(selectedTime) }
+      : { kind: "now" };
+  return fetchJourneysAt(destination, anchor);
+}
+
+export async function fetchJourneysAt(
+  destination: "work" | "home",
+  anchor: JourneyAnchor,
+  options: FetchJourneyOptions = {}
 ): Promise<CommuteSuggestion[]> {
   const settings = loadSettings();
   if (!settings) {
@@ -185,9 +216,9 @@ export async function fetchJourneys(
   }
 
   const time =
-    timePlanning === "later" && selectedTime
-      ? { [arrivalDeparture === "departure" ? "departureTime" : "arrivalTime"]: calculateIsoTimestamp(selectedTime) }
-      : { departureTime: new Date().toISOString() };
+    anchor.kind === "now"
+      ? { departureTime: new Date().toISOString() }
+      : { [anchor.kind === "departure" ? "departureTime" : "arrivalTime"]: anchor.time };
 
   try {
     const result = await apiPost<ApiCalculateResult>(
@@ -201,8 +232,8 @@ export async function fetchJourneys(
         ...stationLocation("workStationLocation", settings.workStationLat, settings.workStationLon),
         direction: destination,
         ...time,
-        results: JOURNEY_RESULTS,
-        excludeLongDistance: settings.excludeFernverkehr === 1,
+        results: options.results ?? JOURNEY_RESULTS,
+        excludeLongDistance: options.excludeLongDistance ?? settings.excludeFernverkehr === 1,
         buffers: {
           bufferLeaveHome: settings.homeLeavingBufferMinutes,
           bufferLeaveWork: settings.workLeavingBufferMinutes,
@@ -254,6 +285,29 @@ export function useJourneysWithRefresh(
     queryKey: ["transport", "journeys", destination, timePlanning, arrivalDeparture, selectedTime],
     queryFn: () => fetchJourneys(destination, timePlanning, arrivalDeparture, selectedTime),
     refetchInterval: 300000, // 5 minutes
+    refetchIntervalInBackground: false,
+  });
+
+  return {
+    ...query,
+    refresh: () => query.refetch(),
+    lastUpdated: query.dataUpdatedAt,
+  };
+}
+
+/** Most options the backend returns per request; the planning view shows as many as it can. */
+const PLAN_RESULTS = 6;
+
+/**
+ * Journeys for the desktop planning view: explicit time anchor (paging moves it) and long-distance filter,
+ * keeping the previous list on screen while the next page loads.
+ */
+export function usePlanJourneys(destination: "work" | "home", anchor: JourneyAnchor, excludeLongDistance: boolean) {
+  const query = useQuery({
+    queryKey: ["transport", "plan", destination, anchor, excludeLongDistance],
+    queryFn: () => fetchJourneysAt(destination, anchor, { results: PLAN_RESULTS, excludeLongDistance }),
+    placeholderData: keepPreviousData,
+    refetchInterval: 300000,
     refetchIntervalInBackground: false,
   });
 

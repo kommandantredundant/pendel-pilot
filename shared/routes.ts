@@ -49,6 +49,10 @@ export const journeySchema = z.object({
     delay: z.number().nullable(), // minutes; null without real-time data
     platform: z.string().optional(),
     plannedPlatform: z.string().optional(),
+    arrival: z.string().optional(), // ISO date at the end of this leg, real-time when available
+    plannedArrival: z.string().optional(),
+    origin: z.string().optional(), // stop names; the arrival stop of one leg is the transfer station
+    destination: z.string().optional(),
   })),
 });
 

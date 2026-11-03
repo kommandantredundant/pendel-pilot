@@ -27,6 +27,8 @@ export const settingsSchema = z.object({
   excludeFernverkehr: z.number().int().min(0).max(1).default(0),
   // Glance: compact mobile view that replaces the dashboards with a "leave in N min" countdown.
   glanceMode: z.number().int().min(0).max(1).default(0),
+  // Plan: desktop view for planning ahead (timeline of several connections); only used on wide screens.
+  planMode: z.number().int().min(0).max(1).default(0),
   // How you usually get to the station, per direction; "both" means you decide on the spot.
   stationModeFromHome: z.enum(["walk", "bike", "both"]).default("both"),
   stationModeFromWork: z.enum(["walk", "bike", "both"]).default("both"),
