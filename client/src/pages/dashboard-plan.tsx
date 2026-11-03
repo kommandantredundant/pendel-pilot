@@ -23,16 +23,20 @@ import {
   defaultTimelineMode,
   doorToDoorMinutes,
   earlierAnchor,
+  lanedSegments,
   laterAnchor,
+  leadMode,
   planMarkers,
   PLAN_TIME_ZONE,
   sortByLeaveTime,
   timeAxis,
-  timelineSegments,
+  timelineModes,
   transferCount,
   transfers,
   worstTransfer,
+  type Lane,
   type TimeAxis,
+  type TimelineMode,
   type TimelineSegment,
   type TransferInfo,
   type TransferStatus,
@@ -100,11 +104,12 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
   const [time, setTime] = useState("");
   const [kind, setKind] = useState<"departure" | "arrival">("departure");
   const [page, setPage] = useState<JourneyAnchor | null>(null);
-  const [modeOverride, setModeOverride] = useState<TravelMode | null>(null);
+  const [modeOverride, setModeOverride] = useState<TimelineMode | null>(null);
 
   const preference: ModePreference =
     (destination === "work" ? settings?.stationModeFromHome : settings?.stationModeFromWork) ?? "both";
   const mode = modeOverride ?? defaultTimelineMode(preference);
+  const lead = leadMode(mode);
   const includeLongDistance = settings?.excludeFernverkehr !== 1;
 
   const barAnchor: JourneyAnchor = useMemo(() => {
@@ -115,9 +120,9 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
 
   const { data: journeys, isLoading, isFetching, isError, error, refresh } = usePlanJourneys(destination, anchor, !includeLongDistance);
 
-  const sorted = useMemo(() => (journeys ? sortByLeaveTime(journeys, mode) : []), [journeys, mode]);
+  const sorted = useMemo(() => (journeys ? sortByLeaveTime(journeys, lead) : []), [journeys, lead]);
   const axis = useMemo(() => timeAxis(sorted, mode), [sorted, mode]);
-  const markers = useMemo(() => planMarkers(sorted, mode), [sorted, mode]);
+  const markers = useMemo(() => planMarkers(sorted, lead), [sorted, lead]);
 
   const resetToNow = useCallback(() => {
     setDate(today);
@@ -274,12 +279,19 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
         <Field label={t("plan.mode", language)}>
           <Segmented
             value={mode}
-            options={(["bike", "walk"] as const).map((value) => ({
+            options={(["bike", "walk", "both"] as const).map((value) => ({
               value,
-              label: <ModeIcon mode={value} className="w-4 h-4" />,
-              title: t(`plan.access.${value}`, language),
+              label:
+                value === "both" ? (
+                  <span className="flex items-center gap-0.5">
+                    <Bike className="w-3.5 h-3.5" aria-hidden />+<Footprints className="w-3.5 h-3.5" aria-hidden />
+                  </span>
+                ) : (
+                  <ModeIcon mode={value} className="w-4 h-4" />
+                ),
+              title: t(value === "both" ? "plan.mode.both" : `plan.access.${value}`, language),
             }))}
-            onChange={(value) => setModeOverride(value as TravelMode)}
+            onChange={(value) => setModeOverride(value as TimelineMode)}
           />
         </Field>
 
@@ -482,16 +494,19 @@ function PlanRow({
 }: {
   suggestion: CommuteSuggestion;
   index: number;
-  mode: TravelMode;
+  mode: TimelineMode;
   axis: TimeAxis | null;
   now: number;
   fastest: boolean;
   fewestTransfers: boolean;
 }) {
   const { language } = useLanguage();
-  const other = otherMode(mode);
-  const status = modeStatus(suggestion, mode, now);
-  const missed = status === "missed";
+  const both = mode === "both";
+  const lead = leadMode(mode);
+  const other = otherMode(lead);
+  const status = modeStatus(suggestion, lead, now);
+  // With both lanes a row only counts as missed once neither mode can make it.
+  const missed = timelineModes(mode).every((travelMode) => modeStatus(suggestion, travelMode, now) === "missed");
   const count = transferCount(suggestion);
   const worst = worstTransfer(suggestion);
   const transferList = transfers(suggestion);
@@ -503,20 +518,28 @@ function PlanRow({
       title={missed ? t("journey.missed", language) : undefined}
     >
       {/* Leave */}
-      <div className="flex flex-col gap-1">
-        <span className={cn("flex items-center gap-1.5 font-mono-numbers text-xl font-semibold tracking-tighter", missed && "line-through", status === "hurry" && "text-hurry")}>
-          <ModeIcon mode={mode} className="w-4 h-4 text-muted-foreground shrink-0" />
-          {hhmm(leaveTime(suggestion, mode))}
-        </span>
-        {status === "hurry" ? (
-          <span className="text-xs font-medium text-hurry">{t("glance.hurry", language)}</span>
-        ) : (
-          <span className={cn("flex items-center gap-1.5 font-mono-numbers text-xs text-muted-foreground", modeStatus(suggestion, other, now) === "missed" && "line-through")}>
-            <ModeIcon mode={other} className="w-3.5 h-3.5 shrink-0" />
-            {hhmm(leaveTime(suggestion, other))}
+      {both ? (
+        <div className="flex flex-col gap-0.5">
+          {timelineModes(mode).map((travelMode) => (
+            <LeaveTime key={travelMode} suggestion={suggestion} mode={travelMode} now={now} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <span className={cn("flex items-center gap-1.5 font-mono-numbers text-xl font-semibold tracking-tighter", status === "missed" && "line-through", status === "hurry" && "text-hurry")}>
+            <ModeIcon mode={lead} className="w-4 h-4 text-muted-foreground shrink-0" />
+            {hhmm(leaveTime(suggestion, lead))}
           </span>
-        )}
-      </div>
+          {status === "hurry" ? (
+            <span className="text-xs font-medium text-hurry">{t("glance.hurry", language)}</span>
+          ) : (
+            <span className={cn("flex items-center gap-1.5 font-mono-numbers text-xs text-muted-foreground", modeStatus(suggestion, other, now) === "missed" && "line-through")}>
+              <ModeIcon mode={other} className="w-3.5 h-3.5 shrink-0" />
+              {hhmm(leaveTime(suggestion, other))}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Timeline and legs */}
       <div className="flex flex-col gap-2 min-w-0">
@@ -537,22 +560,36 @@ function PlanRow({
       </div>
 
       {/* Arrive */}
-      <div className="flex flex-col gap-1">
-        <span className="flex items-center gap-1.5 font-mono-numbers text-xl font-semibold tracking-tighter">
-          <ModeIcon mode={mode} className="w-4 h-4 text-muted-foreground shrink-0" />
-          {hhmm(arriveTime(suggestion, mode))}
-        </span>
-        <span className="flex items-center gap-1.5 font-mono-numbers text-xs text-muted-foreground">
-          <ModeIcon mode={other} className="w-3.5 h-3.5 shrink-0" />
-          {hhmm(arriveTime(suggestion, other))}
-        </span>
-      </div>
+      {both ? (
+        <div className="flex flex-col gap-0.5">
+          {timelineModes(mode).map((travelMode) => (
+            <span key={travelMode} className="flex items-center gap-1.5 font-mono-numbers text-lg font-semibold tracking-tighter">
+              <ModeIcon mode={travelMode} className="w-4 h-4 text-muted-foreground shrink-0" />
+              {hhmm(arriveTime(suggestion, travelMode))}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <span className="flex items-center gap-1.5 font-mono-numbers text-xl font-semibold tracking-tighter">
+            <ModeIcon mode={lead} className="w-4 h-4 text-muted-foreground shrink-0" />
+            {hhmm(arriveTime(suggestion, lead))}
+          </span>
+          <span className="flex items-center gap-1.5 font-mono-numbers text-xs text-muted-foreground">
+            <ModeIcon mode={other} className="w-3.5 h-3.5 shrink-0" />
+            {hhmm(arriveTime(suggestion, other))}
+          </span>
+        </div>
+      )}
 
       {/* Duration */}
       <div className="flex flex-col items-start gap-1">
-        <span className="font-mono-numbers text-base font-medium">
-          {doorToDoorMinutes(suggestion, mode)} <span className="text-xs text-muted-foreground">{t("plan.min", language)}</span>
-        </span>
+        {timelineModes(mode).map((travelMode) => (
+          <span key={travelMode} className="flex items-center gap-1.5 font-mono-numbers text-base font-medium">
+            {both && <ModeIcon mode={travelMode} className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+            {doorToDoorMinutes(suggestion, travelMode)} <span className="text-xs text-muted-foreground">{t("plan.min", language)}</span>
+          </span>
+        ))}
         {fastest && <Marker>{t("plan.fastest", language)}</Marker>}
       </div>
 
@@ -567,6 +604,25 @@ function PlanRow({
         {fewestTransfers && <Marker>{t("plan.fewest", language)}</Marker>}
       </div>
     </li>
+  );
+}
+
+/** One of two equal leave times (both lanes shown), struck through once missed. */
+function LeaveTime({ suggestion, mode, now }: { suggestion: CommuteSuggestion; mode: TravelMode; now: number }) {
+  const { language } = useLanguage();
+  const status = modeStatus(suggestion, mode, now);
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1.5 font-mono-numbers text-lg font-semibold tracking-tighter",
+        status === "missed" && "line-through opacity-50",
+        status === "hurry" && "text-hurry"
+      )}
+      title={status === "hurry" ? t("glance.hurry", language) : status === "missed" ? t("journey.missed", language) : undefined}
+    >
+      <ModeIcon mode={mode} className="w-4 h-4 text-muted-foreground shrink-0" />
+      {hhmm(leaveTime(suggestion, mode))}
+    </span>
   );
 }
 
@@ -607,28 +663,39 @@ function segmentTitle(segment: TimelineSegment, language: Language): string {
   }
 }
 
-function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSuggestion; mode: TravelMode; axis: TimeAxis; now: number }) {
+const LANE_CLASS: Record<Lane, string> = {
+  full: "top-0.5 bottom-0.5",
+  top: "top-0.5 bottom-[calc(50%+1px)]",
+  bottom: "top-[calc(50%+1px)] bottom-0.5",
+};
+
+function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSuggestion; mode: TimelineMode; axis: TimeAxis; now: number }) {
   const { language } = useLanguage();
-  const segments = timelineSegments(suggestion, mode);
+  const segments = lanedSegments(suggestion, mode);
   const showNow = now > axis.start && now < axis.end;
+  const split = mode === "both";
 
   return (
-    <div className="relative h-7" aria-hidden>
+    <div className={cn("relative", split ? "h-9" : "h-7")} aria-hidden>
       {axis.ticks.map((tick) => (
         <span key={tick} className="absolute inset-y-0 w-px bg-border/70" style={{ left: `${axisPercent(axis, tick)}%` }} />
       ))}
       {segments.map((segment, index) => {
         const left = axisPercent(axis, segment.start);
         const width = Math.max(axisPercent(axis, segment.end) - left, segment.kind === "transfer" ? 0.6 : 0.3);
+        const way = segment.kind === "access" || segment.kind === "egress";
         return (
           <div
             key={index}
             title={segmentTitle(segment, language)}
             className={cn(
-              "absolute top-0.5 bottom-0.5 overflow-hidden flex items-center justify-center",
-              index > 0 && "border-l-2 border-card",
+              "absolute overflow-hidden flex items-center justify-center",
+              LANE_CLASS[segment.lane],
+              // Hairline gap to the neighbour; way segments end where the train starts, so they get it on the right.
+              segment.kind === "access" ? "border-r-2" : segment.kind === "ride" && segment.legIndex === 0 ? "" : "border-l-2",
+              "border-card",
               segment.kind === "ride" && "bg-primary text-primary-foreground rounded-[3px]",
-              (segment.kind === "access" || segment.kind === "egress") && "bg-muted-foreground/20 text-foreground/70 rounded-[3px]",
+              way && "bg-muted-foreground/20 text-foreground/70 rounded-[3px]",
               segment.kind === "transfer" && TRANSFER_TEXT[segment.status],
               segment.kind === "transfer" && segment.status !== "ok" && "ring-1 ring-inset ring-current rounded-[3px]"
             )}
@@ -637,7 +704,7 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
             {segment.kind === "ride" && (
               <span className="px-1 truncate text-[11px] font-mono-numbers font-medium">{segment.lineName}</span>
             )}
-            {(segment.kind === "access" || segment.kind === "egress") && <ModeIcon mode={segment.mode} className="w-3.5 h-3.5 shrink-0" />}
+            {way && <ModeIcon mode={segment.mode} className={cn("shrink-0", split ? "w-3 h-3" : "w-3.5 h-3.5")} />}
           </div>
         );
       })}

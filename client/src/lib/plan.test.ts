@@ -9,6 +9,7 @@ import {
   berlinIso,
   doorToDoorMinutes,
   earlierAnchor,
+  lanedSegments,
   laterAnchor,
   planMarkers,
   sortByLeaveTime,
@@ -143,4 +144,29 @@ test("Berlin date helpers convert wall-clock time across daylight saving changes
   assert.equal(berlinDate(Date.parse("2026-11-03T23:30:00Z")), "2026-11-04");
   assert.equal(berlinClock(Date.parse("2026-11-03T23:30:00Z")), "00:30");
   assert.equal(addDays("2026-12-31", 1), "2027-01-01");
+});
+
+test("with both modes the way segments split into a bike lane on top and a walk lane below", () => {
+  const segments = lanedSegments(suggestion(0, [[10, 30]]), "both");
+  const summary = segments.map((segment) => [
+    segment.kind,
+    segment.lane,
+    "mode" in segment ? segment.mode : "-",
+    (segment.start - BASE) / 60_000,
+    (segment.end - BASE) / 60_000,
+  ]);
+  assert.deepEqual(summary, [
+    ["access", "top", "bike", 0, 10],
+    ["egress", "top", "bike", 30, 35],
+    ["access", "bottom", "walk", -10, 10],
+    ["egress", "bottom", "walk", 30, 42],
+    ["ride", "full", "-", 10, 30],
+  ]);
+  assert.ok(lanedSegments(suggestion(0, [[10, 30]]), "bike").every((segment) => segment.lane === "full"));
+});
+
+test("the time axis covers the longer walk lane when both modes are shown", () => {
+  const list = [suggestion(7, [[17, 50]])]; // walk leaves at 17 - 20 = minute -3
+  assert.equal(timeAxis(list, "bike")?.start, BASE);
+  assert.equal(timeAxis(list, "both")?.start, BASE - 15 * 60_000);
 });

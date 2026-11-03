@@ -30,9 +30,22 @@ export interface TransferInfo {
 
 const ms = (iso: string) => Date.parse(iso);
 
-/** Mode the timeline is drawn for: the preferred one, or bike when the choice is spontaneous. */
-export function defaultTimelineMode(preference: ModePreference): TravelMode {
-  return preference === "walk" ? "walk" : "bike";
+/** What the timeline is drawn for: one mode, or both at once (bar split into a bike and a walk lane). */
+export type TimelineMode = ModePreference;
+
+/** The preferred mode; spontaneous users see both lanes. */
+export function defaultTimelineMode(preference: ModePreference): TimelineMode {
+  return preference;
+}
+
+/** Modes shown in the timeline, bike first (top lane). */
+export function timelineModes(mode: TimelineMode): TravelMode[] {
+  return mode === "both" ? ["bike", "walk"] : [mode];
+}
+
+/** Mode used for sorting, markers and dimming; with both lanes the faster bike leads. */
+export function leadMode(mode: TimelineMode): TravelMode {
+  return mode === "both" ? "bike" : mode;
 }
 
 export function transferStatus(minutes: number): TransferStatus {
@@ -115,6 +128,28 @@ export function timelineSegments(suggestion: CommuteSuggestion, mode: TravelMode
   return segments;
 }
 
+export type Lane = "full" | "top" | "bottom";
+export type LanedSegment = TimelineSegment & { lane: Lane };
+
+/**
+ * Segments for the bar. With one mode every segment fills the bar; with both, trains and transfers stay
+ * full height while the way to and from the station splits horizontally: bike on top, walk below, each
+ * with its own length.
+ */
+export function lanedSegments(suggestion: CommuteSuggestion, mode: TimelineMode): LanedSegment[] {
+  if (mode !== "both") return timelineSegments(suggestion, mode).map((segment) => ({ ...segment, lane: "full" as const }));
+  const isWay = (segment: TimelineSegment) => segment.kind === "access" || segment.kind === "egress";
+  const ways = timelineModes(mode).flatMap((travelMode, index) =>
+    timelineSegments(suggestion, travelMode)
+      .filter(isWay)
+      .map((segment) => ({ ...segment, lane: (index === 0 ? "top" : "bottom") as Lane }))
+  );
+  const core = timelineSegments(suggestion, "bike")
+    .filter((segment) => !isWay(segment))
+    .map((segment) => ({ ...segment, lane: "full" as const }));
+  return [...ways, ...core];
+}
+
 export interface PlanMarkers {
   /** Indices of the connections with the shortest door-to-door time. */
   fastest: Set<number>;
@@ -156,8 +191,8 @@ export interface TimeAxis {
 const MINUTE = 60_000;
 
 /** Shared time axis over all rows, padded to whole tick steps so labels land on round times. */
-export function timeAxis(suggestions: CommuteSuggestion[], mode: TravelMode): TimeAxis | null {
-  const segments = suggestions.flatMap((suggestion) => timelineSegments(suggestion, mode));
+export function timeAxis(suggestions: CommuteSuggestion[], mode: TimelineMode): TimeAxis | null {
+  const segments = suggestions.flatMap((suggestion) => lanedSegments(suggestion, mode));
   if (segments.length === 0) return null;
   const min = Math.min(...segments.map((segment) => segment.start));
   const max = Math.max(...segments.map((segment) => segment.end));
