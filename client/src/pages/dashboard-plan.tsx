@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw, Train } from "lucide-react";
@@ -43,7 +43,8 @@ import {
 import { DashboardBase } from "./dashboard-base";
 
 /** Leave · timeline · arrive · duration · transfers; the header and every row share it. */
-const ROW_GRID = "grid grid-cols-[6rem_minmax(0,1fr)_6rem_5.5rem_6.5rem] gap-x-5 items-start";
+/** Number columns stay narrow so the timeline gets the width (about 1000 px on a 13" laptop). */
+const ROW_GRID = "grid grid-cols-[4.75rem_minmax(0,1fr)_4.75rem_4.75rem_6.75rem] gap-x-5 items-start";
 
 const ModeIcon = ({ mode, className }: { mode: TravelMode; className?: string }) =>
   mode === "walk" ? <Footprints className={className} aria-hidden /> : <Bike className={className} aria-hidden />;
@@ -649,7 +650,7 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
 
   return (
     <div>
-      {/* Margins hold the labels: departure times above each train, transfer minutes and displaced tracks below. */}
+      {/* Margins hold the labels: departure times above each train, transfer minutes below. */}
       <div className={cn("relative mt-4 mb-4", split ? "h-9" : "h-7")}>
         {axis.ticks.map((tick) => (
           <span key={tick} className="absolute inset-y-0 w-px bg-border/70" style={{ left: `${axisPercent(axis, tick)}%` }} />
@@ -695,12 +696,11 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
           <span
             key={`transfer-${index}`}
             className={cn(
-              // Ends where the next train starts, leaving room for that train's displaced track to its right.
-              "absolute top-[calc(100%+3px)] -translate-x-full pr-0.5 inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] leading-none font-mono-numbers",
+              "absolute top-[calc(100%+3px)] -translate-x-1/2 inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] leading-none font-mono-numbers",
               TRANSFER_TEXT[segment.status],
               segment.status !== "ok" && "font-semibold"
             )}
-            style={{ left: `${axisPercent(axis, segment.end)}%` }}
+            style={{ left: `${axisPercent(axis, (segment.start + segment.end) / 2)}%` }}
             title={transferLabel(segment, language)}
           >
             {segment.status !== "ok" && <AlertTriangle className="w-3 h-3" aria-hidden />}
@@ -718,8 +718,8 @@ type RideSegmentData = Extract<LanedSegment, { kind: "ride" }>;
 type Leg = CommuteSuggestion["journey"]["legs"][number];
 
 /**
- * One train in the bar: line name (always wins the space) and the track as a light chip. When the
- * segment is too short for the chip, the track moves below the start of the train.
+ * One train in the bar: line name and the track as a light chip, always in the same place. On a
+ * segment too short for both the line name gives way (ellipsis, full name in the tooltip).
  */
 function RideSegment({
   segment,
@@ -736,71 +736,31 @@ function RideSegment({
   title: string;
   language: Language;
 }) {
-  const boxRef = useRef<HTMLDivElement>(null);
-  const lineRef = useRef<HTMLSpanElement>(null);
-  const chipRef = useRef<HTMLSpanElement>(null);
-  const chipWidth = useRef(0);
-  const [chipFits, setChipFits] = useState(true);
   const platformChanged = !!leg?.platform && !!leg.plannedPlatform && leg.platform !== leg.plannedPlatform;
-
-  useLayoutEffect(() => {
-    const box = boxRef.current;
-    if (!box || !leg?.platform) return;
-    const measure = () => {
-      if (chipRef.current) chipWidth.current = chipRef.current.offsetWidth;
-      const needed = (lineRef.current?.scrollWidth ?? 0) + chipWidth.current + 4 /* gap */ + 12 /* padding */;
-      setChipFits(needed <= box.clientWidth);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(box);
-    return () => observer.disconnect();
-  }, [leg?.platform, segment.lineName]);
-
-  const platformText = leg?.platform ? `${t("journey.platform.short", language)} ${leg.platform}` : undefined;
-
   return (
     <>
-      {leg && (
-        <RideTime leg={leg} left={left} language={language} />
-      )}
+      {leg && <RideTime leg={leg} left={left} language={language} />}
       <div
-        ref={boxRef}
         title={title}
         className={cn(
-          "absolute flex items-center gap-1 overflow-hidden px-1.5 bg-primary text-primary-foreground rounded-[3px]",
+          "absolute flex items-center gap-1.5 overflow-hidden px-1.5 bg-primary text-primary-foreground rounded-[3px]",
           LANE_CLASS[segment.lane],
           segment.legIndex > 0 && "border-l-2 border-card"
         )}
         style={{ left: `${left}%`, width: `${width}%` }}
       >
-        <span ref={lineRef} className="truncate text-[11px] font-mono-numbers font-semibold">
-          {segment.lineName}
-        </span>
-        {platformText && chipFits && (
+        <span className="min-w-0 truncate text-[11px] font-mono-numbers font-semibold">{segment.lineName}</span>
+        {leg?.platform && (
           <span
-            ref={chipRef}
             className={cn(
               "shrink-0 whitespace-nowrap rounded-[3px] bg-card/90 px-1 text-[10px] leading-4 font-mono-numbers font-medium",
               platformChanged ? "text-late" : "text-foreground"
             )}
           >
-            {platformText}
+            {t("journey.platform.short", language)} {leg.platform}
           </span>
         )}
       </div>
-      {platformText && !chipFits && (
-        <span
-          className={cn(
-            "absolute top-[calc(100%+3px)] whitespace-nowrap text-[11px] leading-none font-mono-numbers",
-            segment.legIndex > 0 && "pl-1.5", // keeps clear of the transfer minutes ending here
-            platformChanged ? "text-late font-semibold" : "text-muted-foreground"
-          )}
-          style={{ left: `${left}%` }}
-        >
-          {platformText}
-        </span>
-      )}
     </>
   );
 }

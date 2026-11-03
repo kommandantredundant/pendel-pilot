@@ -25,7 +25,8 @@ export function Layout({ children }: LayoutProps) {
   const view = useActiveView();
   // Plan needs the width for its timeline; the settings page keeps the narrow column.
   const wide = view === "plan" && location !== "/how";
-  const width = wide ? "max-w-6xl" : "max-w-4xl";
+  // 1536 px: on a 13" laptop (1440 px) Plan uses the full width, larger screens keep it readable.
+  const width = wide ? "max-w-screen-2xl" : "max-w-4xl";
   const ThemeIcon = preference === "light" ? Sun : preference === "dark" ? Moon : Monitor;
 
   return (
