@@ -1,11 +1,12 @@
 import { Fragment } from "react";
-import { Train, ChevronRight, Footprints, Bike, Check, type LucideIcon } from "lucide-react";
+import { ChevronRight, Footprints, Bike, Check, type LucideIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { motion } from "framer-motion";
 import { cn } from "./layout";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
 import { modeStatus, TRAVEL_MODES, type ModePreference, type TravelMode } from "@/lib/glance";
+import { TrainIcon } from "@/components/train-icon";
 
 interface JourneyCardProps {
   journey: {
@@ -193,7 +194,7 @@ export function LinePill({
     // Styled like a passenger information display: line in brand blue, track in a tinted field.
     <span className="inline-flex items-stretch rounded-md overflow-hidden text-xs font-mono-numbers font-medium whitespace-nowrap border border-primary">
       <span className="bg-primary text-primary-foreground px-1.5 py-0.5 flex items-center gap-1">
-        <Train className="w-3 h-3" aria-hidden />
+        <TrainIcon className="w-3 h-3" aria-hidden />
         {leg.lineName}
       </span>
       {leg.platform && (

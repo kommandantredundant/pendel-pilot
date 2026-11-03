@@ -1,15 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
-  <!-- White circle background -->
-  <circle cx="12" cy="12" r="11" fill="#FFFFFF" />
-  <!-- Train icon in red color -->
-  <g stroke="hsl(348 83% 47%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(12, 12) scale(0.75) translate(-12, -12)">
-    <rect width="16" height="16" x="4" y="3" rx="2" />
-    <path d="M4 11h16" />
-    <path d="M12 3v8" />
-    <path d="M8 19h8" />
-    <path d="M8 15v4" />
-    <path d="M16 15v4" />
-    <circle cx="7.5" cy="16.5" r=".5" fill="hsl(348 83% 47%)" stroke="none"/>
-    <circle cx="16.5" cy="16.5" r=".5" fill="hsl(348 83% 47%)" stroke="none"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Pendel-Pilot: Tabler Icons "train" (MIT, © Paweł Kuna) in white on the brand "station sign" blue. -->
+  <rect width="64" height="64" rx="14" fill="#1d4fd7"/>
+  <g transform="translate(10 9.1) scale(1.833)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 13c0 -3.87 -3.37 -7 -10 -7h-8"/><path d="M3 15h16a2 2 0 0 0 2 -2"/><path d="M3 6v5h17.5"/><path d="M3 11v4"/><path d="M8 11v-5"/><path d="M13 11v-4.5"/><path d="M3 19h18"/></g>
 </svg>

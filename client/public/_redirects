@@ -1,1 +1,5 @@
+# Old paths from before 0.1.1, kept for bookmarks and home-screen links.
+/andback /tohome 301
+/how /settings 301
+# Single-page app: every other path is served by the client router.
 /* /index.html 200

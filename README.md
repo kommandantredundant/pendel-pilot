@@ -80,3 +80,7 @@ The site is public but not announced yet, so search engines are asked not to ind
 
 - [ ] the `X-Robots-Tag: noindex, nofollow` block in `client/public/_headers`
 - [ ] the `<meta name="robots" content="noindex, nofollow">` tag in `client/index.html`
+
+## Credits
+
+The train symbol and app icon use the "train" icon from [Tabler Icons](https://tabler.io/icons) (MIT License, © 2020–2024 Paweł Kuna).

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Settings as SettingsIcon, Train, ArrowRight } from "lucide-react";
+import { Settings as SettingsIcon, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useJourneysWithRefresh } from "@/hooks/use-transport";
 import { useSettings as useUserConfig } from "@/hooks/use-settings";
@@ -14,6 +14,7 @@ import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
 import { Timepicker } from "timepicker-ui-react";
 import "timepicker-ui/index.css";
+import { TrainIcon } from "@/components/train-icon";
 
 interface DashboardBaseProps {
   destination: "work" | "home";
@@ -97,7 +98,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
         <p className="text-muted-foreground max-w-sm">
           {t('dashboard.setup.desc', language)}
         </p>
-        <Link href="/how">
+        <Link href="/settings">
           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <SettingsIcon className="w-4 h-4 mr-2" />
             {t('dashboard.configure', language)}
@@ -214,7 +215,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
               className="bg-card rounded-xl border border-dashed border-border p-12 text-center flex flex-col items-center justify-center"
             >
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                <Train className="w-8 h-8 text-muted-foreground" />
+                <TrainIcon className="w-8 h-8 text-muted-foreground" />
               </div>
               <h3 className="text-xl font-bold mb-2">{t('dashboard.no-trains.title', language)}</h3>
               <p className="text-muted-foreground">{t('dashboard.no-trains.desc', language)}</p>
