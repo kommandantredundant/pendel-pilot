@@ -17,13 +17,15 @@ The browser UI is the React app in `client/`; it never calls providers directly,
 
 The UI geocodes home and work addresses once when settings are saved (re-geocoding only changed addresses) and stores the coordinates with the profile. Each dashboard load posts the profile to `/api/journeys/calculate` with `results: 5`; every returned option becomes one journey card.
 
+The dashboards come in three views (`client/src/hooks/use-active-view.ts`): the classic cards, Glance (a one-handed countdown, opt-in) and Plan (opt-in, only from 1024 px wide). Plan (`client/src/pages/dashboard-plan.tsx`, logic in `client/src/lib/plan.ts`) requests 6 options for an explicit anchor built from a Europe/Berlin date and time, draws each option as a door-to-door timeline on a shared axis (content up to 1536 px wide, so the timeline gets about 1000 px on a 13" laptop; each train shows its line and track in the bar, its departure time and delay above it), flags tight transfers (under 5 min, at risk at 1 min or less) and pages with Earlier/Later by re-anchoring: later departs one minute after the last train, earlier arrives one minute before the first. Its long-distance switch writes `excludeFernverkehr` to the saved profile.
+
 ### API contracts
 
 | Endpoint | Input | Result |
 | --- | --- | --- |
 | `GET /api/stations/search` | `query` (2–100 chars), optional `limit` (1–20; default 5) | Transitous stop matches (IDs such as `de-DELFI_de:03241:31`). |
 | `GET /api/addresses/geocode` | non-empty `q`, optional `limit` (1–10; default 5) | Photon address candidates and coordinates. |
-| `POST /api/journeys/calculate` | home/work station IDs, home/work coordinates, `direction` (`work` or `home`), `departureTime` and/or `arrivalTime` (ISO; departure wins when both are sent), optional minute buffers, optional `results` (1–6, default 1), optional `excludeLongDistance` | `options[]` (one canonical journey per connection, plus `lineName` and `transfers`) and `calculatedJourneys` holding the first option. |
+| `POST /api/journeys/calculate` | home/work station IDs, home/work coordinates, `direction` (`work` or `home`), `departureTime` and/or `arrivalTime` (ISO; departure wins when both are sent), optional minute buffers, optional `results` (1–6, default 1), optional `excludeLongDistance` | `options[]` (one canonical journey per connection, plus `lineName`, `transfers` and `legs[]` with line, departure/arrival times, delays, tracks and stop names) and `calculatedJourneys` holding the first option. |
 
 All endpoints use `{ "success": true, "data": ... }` on success and `{ "success": false, "error": { "code", "message", "details" } }` on failure. Validate external data before presenting it; a missing canonical field is an upstream-bad-response error, not an invitation to invent an alias.
 

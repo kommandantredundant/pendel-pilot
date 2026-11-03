@@ -87,14 +87,25 @@ describe('journey options', () => {
       ]
     );
     assert.deepEqual(options[1].legs, [
-      { lineName: 'RE3', departureTime: '2026-04-10T06:02:00Z', departurePlatform: '7', plannedDeparturePlatform: '5' },
+      {
+        lineName: 'RE3',
+        departureTime: '2026-04-10T06:02:00Z',
+        departurePlatform: '7',
+        plannedDeparturePlatform: '5',
+        arrivalTime: '2026-04-10T06:25:00Z',
+        departureStopName: 'Berlin Südkreuz',
+        arrivalStopName: 'Berlin Hbf'
+      },
       {
         lineName: 'S5',
         departureTime: '2026-04-10T06:04:00.000Z',
         plannedDepartureTime: '2026-04-10T06:02:00Z',
         departureDelaySec: 120,
         departurePlatform: '8',
-        plannedDeparturePlatform: '8'
+        plannedDeparturePlatform: '8',
+        arrivalTime: '2026-04-10T06:25:00Z',
+        departureStopName: 'Berlin Hbf',
+        arrivalStopName: 'Berlin Hbf'
       }
     ]);
   });

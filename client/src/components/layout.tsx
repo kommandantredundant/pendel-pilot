@@ -6,7 +6,7 @@ import { twMerge } from "tailwind-merge";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
-import { useSettings } from "@/hooks/use-settings";
+import { useActiveView } from "@/hooks/use-active-view";
 import { BottomNav } from "@/components/bottom-nav";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -22,20 +22,26 @@ export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const { language } = useLanguage();
   const { preference, cycle } = useTheme();
-  const { data: settings } = useSettings();
+  const view = useActiveView();
+  // Plan needs the width for its timeline; the settings page keeps the narrow column.
+  const wide = view === "plan" && location !== "/how";
+  // 1536 px: on a 13" laptop (1440 px) Plan uses the full width, larger screens keep it readable.
+  const width = wide ? "max-w-screen-2xl" : "max-w-4xl";
   const ThemeIcon = preference === "light" ? Sun : preference === "dark" ? Moon : Monitor;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top Navigation Bar */}
       <nav className="border-b border-border/70 sticky top-0 bg-card/95 backdrop-blur z-10">
-        <div className="flex items-center px-4 md:px-8 py-3 max-w-4xl mx-auto w-full">
+        <div className={cn("flex items-center px-4 md:px-8 py-3 mx-auto w-full", width)}>
           <div className="flex items-center gap-3">
             <Train className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">
               {t('app.title', language)}
-              {settings?.glanceMode === 1 && (
-                <span className="ml-1.5 font-mono-numbers text-[0.8em] font-medium uppercase tracking-wide text-primary">Glance</span>
+              {view !== "classic" && (
+                <span className="ml-1.5 font-mono-numbers text-[0.8em] font-medium uppercase tracking-wide text-primary">
+                  {view === "glance" ? "Glance" : "Plan"}
+                </span>
               )}
             </span>
           </div>
@@ -52,7 +58,7 @@ export function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-8 pb-24 md:pb-32 w-full max-w-4xl mx-auto">
+      <main className={cn("flex-1 p-4 md:p-8 pb-24 md:pb-32 w-full mx-auto", width)}>
         <ErrorBoundary>
           <motion.div
             key={location}

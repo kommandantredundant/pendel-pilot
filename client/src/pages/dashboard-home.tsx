@@ -1,8 +1,10 @@
-import { useSettings } from "@/hooks/use-settings";
+import { useActiveView } from "@/hooks/use-active-view";
 import { DashboardBase } from "./dashboard-base";
 import { DashboardGlance } from "./dashboard-glance";
+import { DashboardPlan } from "./dashboard-plan";
 
 export function HomeDashboard() {
-  const { data: settings } = useSettings();
-  return settings?.glanceMode === 1 ? <DashboardGlance destination="home" /> : <DashboardBase destination="home" />;
+  const view = useActiveView();
+  if (view === "plan") return <DashboardPlan destination="home" />;
+  return view === "glance" ? <DashboardGlance destination="home" /> : <DashboardBase destination="home" />;
 }
