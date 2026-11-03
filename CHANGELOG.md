@@ -1,6 +1,6 @@
 # Changelog
 
-Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Release deploys").
+Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
 ## 0.1.1
 
