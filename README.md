@@ -59,4 +59,24 @@ npx wrangler@4.107.0 pages project create pendel-pilot --production-branch main 
 npm run deploy:production
 ```
 
-Wrangler is not a dependency; deploy scripts fetch the pinned `wrangler@4.107.0` on demand. The GitHub workflow `Deploy production` does the same with `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_PAGES_PROJECT_NAME` secrets.
+Wrangler is not a dependency; deploy scripts fetch the pinned `wrangler@4.107.0` on demand.
+
+### Release deploys
+
+Publishing a GitHub release runs the workflow `Deploy production` (`.github/workflows/deploy-production.yml`): it checks out the release tag, runs `npm run check`, creates the Pages project if it is missing, and deploys `dist/` plus `functions/` to production. Pre-releases are skipped; the workflow can also be started by hand from the Actions tab.
+
+It needs two repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with the permission *Account → Cloudflare Pages → Edit*, limited to your account. |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (dashboard → Workers & Pages, right-hand side). |
+
+The project name defaults to `pendel-pilot`; set the repository variable `CLOUDFLARE_PAGES_PROJECT_NAME` to use another one.
+
+### Before the official release
+
+The site is public but not announced yet, so search engines are asked not to index it. Remove both before the official release:
+
+- [ ] the `X-Robots-Tag: noindex, nofollow` block in `client/public/_headers`
+- [ ] the `<meta name="robots" content="noindex, nofollow">` tag in `client/index.html`

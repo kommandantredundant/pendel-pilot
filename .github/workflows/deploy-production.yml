@@ -1,6 +1,10 @@
 name: Deploy production
 
+# Publishing a GitHub release deploys the released tag to Cloudflare Pages production.
+# A manual run (Actions → Deploy production → Run workflow) deploys the selected branch or tag.
 on:
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -13,15 +17,20 @@ concurrency:
 env:
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_PAGES_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
+  # The project name is not secret; a repository variable can override the default.
+  CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'pendel-pilot' }}
+  WRANGLER: npx --yes wrangler@4.107.0
 
 jobs:
   deploy:
     name: Validate and deploy to Cloudflare Pages production
+    # Pre-releases are for testing and do not go live.
+    if: github.event_name != 'release' || !github.event.release.prerelease
     runs-on: ubuntu-latest
     environment: production
 
     steps:
+      # For a release this checks out the release tag.
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -39,9 +48,29 @@ jobs:
 
       - name: Verify Cloudflare deployment secrets
         run: |
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_PAGES_PROJECT_NAME"
+          missing=0
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is not set (Settings → Secrets and variables → Actions)."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Create the Pages project if it does not exist yet
+        run: |
+          if $WRANGLER pages project list | grep -qw "$CLOUDFLARE_PAGES_PROJECT_NAME"; then
+            echo "Pages project $CLOUDFLARE_PAGES_PROJECT_NAME exists."
+          else
+            $WRANGLER pages project create "$CLOUDFLARE_PAGES_PROJECT_NAME" --production-branch main
+          fi
 
       - name: Deploy production
-        run: npx wrangler@4.107.0 pages deploy dist --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME" --branch main
+        env:
+          RELEASE_NAME: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          $WRANGLER pages deploy dist \
+            --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --branch main \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-message "Release $RELEASE_NAME"
