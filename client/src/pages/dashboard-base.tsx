@@ -225,7 +225,12 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
               className="space-y-3"
             >
               {journeys?.map((journey: any, index: number) => (
-                <JourneyCard key={index} journey={journey} index={index} />
+                <JourneyCard
+                  key={index}
+                  journey={journey}
+                  index={index}
+                  preference={destination === "work" ? settings.stationModeFromHome : settings.stationModeFromWork}
+                />
               ))}
             </motion.div>
           )}

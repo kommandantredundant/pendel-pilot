@@ -25,6 +25,11 @@ export const settingsSchema = z.object({
   homeLeavingBufferMinutes: z.number().int().min(0).max(60).default(0),
   workLeavingBufferMinutes: z.number().int().min(0).max(60).default(0),
   excludeFernverkehr: z.number().int().min(0).max(1).default(0),
+  // Glance: compact mobile view that replaces the dashboards with a "leave in N min" countdown.
+  glanceMode: z.number().int().min(0).max(1).default(0),
+  // How you usually get to the station, per direction; "both" means you decide on the spot.
+  stationModeFromHome: z.enum(["walk", "bike", "both"]).default("both"),
+  stationModeFromWork: z.enum(["walk", "bike", "both"]).default("both"),
   language: z.enum(["en", "de"]).default("en"),
 
   // When homeAddress/workAddress were last resolved to coordinates via /api/addresses/geocode.

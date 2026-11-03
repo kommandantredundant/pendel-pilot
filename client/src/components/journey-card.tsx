@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "./layout";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
+import { modeStatus, TRAVEL_MODES, type ModePreference, type TravelMode } from "@/lib/glance";
 
 interface JourneyCardProps {
   journey: {
@@ -37,6 +38,15 @@ interface JourneyCardProps {
     finalDestinationType: 'work' | 'home';
   };
   index: number;
+  /** Preferred way to the station for this direction: it comes first and stands out; "both" treats them equally. */
+  preference?: ModePreference;
+}
+
+const MODE_ICON: Record<TravelMode, LucideIcon> = { walk: Footprints, bike: Bike };
+
+/** Preferred mode first; the other one follows. */
+function modeOrder(preference: ModePreference): TravelMode[] {
+  return preference === "bike" ? ["bike", "walk"] : TRAVEL_MODES;
 }
 
 /**
@@ -44,7 +54,7 @@ interface JourneyCardProps {
  * Sections sit side by side from `sm` upwards and stack on phones, centred, separated by hairlines
  * instead of nested boxes. Colour is reserved for punctuality; transport modes use icons only.
  */
-export function JourneyCard({ journey, index }: JourneyCardProps) {
+export function JourneyCard({ journey, index, preference = "both" }: JourneyCardProps) {
   const { journey: j, finalDestinationType } = journey;
   const { language } = useLanguage();
   const now = Date.now();
@@ -59,23 +69,19 @@ export function JourneyCard({ journey, index }: JourneyCardProps) {
     >
       <div className="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] divide-y sm:divide-y-0 sm:divide-x divide-border/70">
         <Section label={t('journey.section.leave', language)}>
-          <div className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-3 w-full justify-items-center sm:w-fit sm:justify-items-start">
-            <ModeTime
-              icon={Footprints}
-              time={journey.leaveHomeWalkTime}
-              detail={`${journey.walkTimeMinutes} ${t('journey.walk', language)}`}
-              missed={Date.parse(journey.leaveHomeWalkTime) < now}
-              emphasis
-              testId={`leave-walk-time-${index}`}
-            />
-            <ModeTime
-              icon={Bike}
-              time={journey.leaveHomeBikeTime}
-              detail={`${journey.bikeTimeMinutes} ${t('journey.bike', language)}`}
-              missed={Date.parse(journey.leaveHomeBikeTime) < now}
-              emphasis
-              testId={`leave-bike-time-${index}`}
-            />
+          <div className={MODE_GRID}>
+            {modeOrder(preference).map((mode) => (
+              <ModeTime
+                key={mode}
+                icon={MODE_ICON[mode]}
+                time={mode === "walk" ? journey.leaveHomeWalkTime : journey.leaveHomeBikeTime}
+                detail={`${mode === "walk" ? journey.walkTimeMinutes : journey.bikeTimeMinutes} ${t(`journey.${mode}`, language)}`}
+                missed={modeStatus(journey, mode, now) === "missed"}
+                hurry={modeStatus(journey, mode, now) === "hurry"}
+                emphasis={preference === "both" || preference === mode}
+                testId={`leave-${mode}-time-${index}`}
+              />
+            ))}
           </div>
         </Section>
 
@@ -94,25 +100,26 @@ export function JourneyCard({ journey, index }: JourneyCardProps) {
         </Section>
 
         <Section label={`${t('journey.section.arrive', language)} · ${destLabel}`}>
-          <div className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-3 w-full justify-items-center sm:w-fit sm:justify-items-start">
-            <ModeTime
-              icon={Footprints}
-              time={journey.arriveWalkTime}
-              detail={`${journey.arriveWalkMinutes} ${t('journey.walk', language)}`}
-              testId={`arrive-walk-time-${index}`}
-            />
-            <ModeTime
-              icon={Bike}
-              time={journey.arriveBikeTime}
-              detail={`${journey.arriveBikeMinutes} ${t('journey.bike', language)}`}
-              testId={`arrive-bike-time-${index}`}
-            />
+          <div className={MODE_GRID}>
+            {modeOrder(preference).map((mode) => (
+              <ModeTime
+                key={mode}
+                icon={MODE_ICON[mode]}
+                time={mode === "walk" ? journey.arriveWalkTime : journey.arriveBikeTime}
+                detail={`${mode === "walk" ? journey.arriveWalkMinutes : journey.arriveBikeMinutes} ${t(`journey.${mode}`, language)}`}
+                muted={preference !== "both" && preference !== mode}
+                testId={`arrive-${mode}-time-${index}`}
+              />
+            ))}
           </div>
         </Section>
       </div>
     </motion.article>
   );
 }
+
+const MODE_GRID =
+  "grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-3 w-full justify-items-center sm:w-fit sm:justify-items-start";
 
 function Section({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
@@ -128,22 +135,29 @@ function ModeTime({
   time,
   detail,
   emphasis = false,
+  muted = false,
   missed = false,
+  hurry = false,
   testId,
 }: {
   icon: LucideIcon;
   time: string;
   detail: string;
+  /** Large leave time (preferred mode). */
   emphasis?: boolean;
+  /** Smaller and lighter (non-preferred mode). */
+  muted?: boolean;
   missed?: boolean;
+  /** Leave time just passed but still makeable by hurrying. */
+  hurry?: boolean;
   testId: string;
 }) {
   const { language } = useLanguage();
   return (
     <div
       data-testid={testId}
-      className={cn("flex items-center gap-2.5", missed && "opacity-40")}
-      title={missed ? t('journey.missed', language) : undefined}
+      className={cn("flex items-center gap-2.5", missed && "opacity-40", muted && "opacity-70")}
+      title={missed ? t('journey.missed', language) : hurry ? t('glance.hurry', language) : undefined}
     >
       <span className="w-8 h-8 rounded-full bg-secondary text-foreground/70 flex items-center justify-center shrink-0">
         <Icon className="w-4 h-4" aria-hidden />
@@ -153,18 +167,21 @@ function ModeTime({
           className={cn(
             "font-mono-numbers tracking-tighter",
             emphasis ? "text-2xl font-semibold text-foreground" : "text-lg font-medium text-foreground/80",
-            missed && "line-through"
+            missed && "line-through",
+            hurry && "text-hurry"
           )}
         >
           {format(parseISO(time), "HH:mm")}
         </span>
-        <span className="text-xs text-muted-foreground mt-1">{detail}</span>
+        <span className={cn("text-xs mt-1", hurry ? "text-hurry font-medium" : "text-muted-foreground")}>
+          {hurry ? t('glance.hurry', language) : detail}
+        </span>
       </span>
     </div>
   );
 }
 
-function LinePill({
+export function LinePill({
   leg,
   platformLabel,
 }: {
@@ -189,7 +206,7 @@ function LinePill({
   );
 }
 
-function DepartureTime({
+export function DepartureTime({
   leg,
   onTimeLabel,
 }: {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, MapPin, Footprints, Bike, Loader2, Zap, Route, AlertCircle } from "lucide-react";
+import { Save, MapPin, Footprints, Bike, Loader2, Zap, Route, AlertCircle, Eye } from "lucide-react";
 import { useLocation } from "wouter";
 import { insertSettingsSchema } from "@shared/client-schema";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
@@ -43,6 +43,9 @@ const formSchema = insertSettingsSchema.extend({
   homeLeavingBufferMinutes: z.coerce.number().min(0).max(60),
   workLeavingBufferMinutes: z.coerce.number().min(0).max(60),
   excludeFernverkehr: z.coerce.number().min(0).max(1),
+  glanceMode: z.coerce.number().min(0).max(1),
+  stationModeFromHome: z.enum(["walk", "bike", "both"]),
+  stationModeFromWork: z.enum(["walk", "bike", "both"]),
   language: z.enum(["en", "de"]).default("en"),
 });
 
@@ -72,6 +75,9 @@ export default function SettingsPage() {
       homeLeavingBufferMinutes: 0,
       workLeavingBufferMinutes: 0,
       excludeFernverkehr: 0,
+      glanceMode: 0,
+      stationModeFromHome: "both",
+      stationModeFromWork: "both",
       language: "en",
     },
   });
@@ -386,6 +392,38 @@ export default function SettingsPage() {
                   )}
                 />
               </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{t('settings.station.mode', language)}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(["stationModeFromHome", "stationModeFromWork"] as const).map((name) => (
+                    <FormField
+                      key={name}
+                      control={form.control}
+                      name={name}
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-xs text-muted-foreground">
+                            {t(name === "stationModeFromHome" ? 'settings.station.mode.fromHome' : 'settings.station.mode.fromWork', language)}
+                          </FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="h-10 rounded-lg bg-card">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="bike">{t('settings.station.mode.bike', language)}</SelectItem>
+                              <SelectItem value="walk">{t('settings.station.mode.walk', language)}</SelectItem>
+                              <SelectItem value="both">{t('settings.station.mode.both', language)}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('settings.station.mode.desc', language)}</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -412,6 +450,36 @@ export default function SettingsPage() {
                     <div className="flex-1">
                       <FormLabel className="cursor-pointer font-medium">{t('settings.trains.exclude', language)}</FormLabel>
                       <FormDescription>{t('settings.trains.exclude.desc', language)}</FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Glance view */}
+          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Eye className="w-4 h-4 text-muted-foreground" /> Glance
+              </CardTitle>
+              <CardDescription>{t('settings.glance.desc', language)}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <FormField
+                control={form.control}
+                name="glanceMode"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value === 1}
+                        onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                      />
+                    </FormControl>
+                    <div className="flex-1">
+                      <FormLabel className="cursor-pointer font-medium">{t('settings.glance.enable', language)}</FormLabel>
+                      <FormDescription>{t('settings.glance.enable.desc', language)}</FormDescription>
                     </div>
                   </FormItem>
                 )}

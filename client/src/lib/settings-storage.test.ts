@@ -18,6 +18,9 @@ const sampleSettings = {
   homeLeavingBufferMinutes: 2,
   workLeavingBufferMinutes: 2,
   excludeFernverkehr: 1,
+  glanceMode: 1,
+  stationModeFromHome: "bike",
+  stationModeFromWork: "both",
   language: "de",
 } as const;
 
@@ -62,4 +65,13 @@ test("clearSettings removes persisted settings", () => {
   saveSettings(sampleSettings);
   clearSettings();
   assert.equal(loadSettings(), null);
+});
+
+test("profiles saved before Glance existed load with Glance off and a spontaneous choice", () => {
+  const { glanceMode: _glance, stationModeFromHome: _fromHome, stationModeFromWork: _fromWork, ...legacy } = sampleSettings;
+  localStorageStub.setItem("pendelpilot.settings.v1", JSON.stringify(legacy));
+  const loaded = loadSettings();
+  assert.equal(loaded?.glanceMode, 0);
+  assert.equal(loaded?.stationModeFromHome, "both");
+  assert.equal(loaded?.stationModeFromWork, "both");
 });

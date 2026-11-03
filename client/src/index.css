@@ -48,6 +48,10 @@
      */
     --success: 164 100% 25%;
     --late: 25 100% 37%;
+    /* Glance countdown "leave soon" (3–10 min); always paired with the countdown text itself */
+    --soon: 38 95% 30%;
+    /* "Only if you hurry": dark red, set apart from the orange of delays; always paired with "+N" or a warning text */
+    --hurry: 0 80% 34%;
 
     --radius: 0.5rem;
   }
@@ -75,6 +79,8 @@
     --ring: 215 100% 68%;
     --success: 164 70% 50%;
     --late: 25 100% 62%;
+    --soon: 45 95% 58%;
+    --hurry: 0 75% 60%;
   }
 
   body {

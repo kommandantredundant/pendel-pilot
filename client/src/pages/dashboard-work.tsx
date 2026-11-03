@@ -1,5 +1,8 @@
+import { useSettings } from "@/hooks/use-settings";
 import { DashboardBase } from "./dashboard-base";
+import { DashboardGlance } from "./dashboard-glance";
 
 export function WorkDashboard() {
-  return <DashboardBase destination="work" />;
+  const { data: settings } = useSettings();
+  return settings?.glanceMode === 1 ? <DashboardGlance destination="work" /> : <DashboardBase destination="work" />;
 }
