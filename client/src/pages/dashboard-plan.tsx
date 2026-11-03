@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw, TrainFront } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw } from "lucide-react";
 import type { CommuteSuggestion } from "@shared/routes";
 import { usePlanJourneys, type JourneyAnchor } from "@/hooks/use-transport";
 import { useSettings } from "@/hooks/use-settings";
@@ -13,6 +13,7 @@ import { useLanguage } from "@/lib/language-context";
 import { t, type Language } from "@/lib/i18n";
 import { loadSettings, saveSettings } from "@/lib/settings-storage";
 import { arriveTime, leaveTime, modeStatus, otherMode, type ModePreference, type TravelMode } from "@/lib/glance";
+import { TrainIcon } from "@/components/train-icon";
 import {
   addDays,
   axisPercent,
@@ -324,7 +325,7 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
           </div>
         ) : sorted.length === 0 && !isError ? (
           <div className="p-12 text-center flex flex-col items-center gap-3">
-            <TrainFront className="w-8 h-8 text-muted-foreground" aria-hidden />
+            <TrainIcon className="w-8 h-8 text-muted-foreground" aria-hidden />
             <p className="font-semibold">{t("dashboard.no-trains.title", language)}</p>
             <p className="text-sm text-muted-foreground">{t("dashboard.no-trains.desc", language)}</p>
           </div>

@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { TrainFront, Monitor, Sun, Moon } from "lucide-react";
+import { Monitor, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -9,6 +9,7 @@ import { useTheme } from "@/lib/theme";
 import { useActiveView } from "@/hooks/use-active-view";
 import { BottomNav } from "@/components/bottom-nav";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { TrainIcon } from "@/components/train-icon";
 
 export function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -35,7 +36,7 @@ export function Layout({ children }: LayoutProps) {
       <nav className="border-b border-border/70 sticky top-0 bg-card/95 backdrop-blur z-10">
         <div className={cn("flex items-center px-4 md:px-8 py-3 mx-auto w-full", width)}>
           <div className="flex items-center gap-3">
-            <TrainFront className="w-5 h-5 text-primary" />
+            <TrainIcon className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">
               {t('app.title', language)}
               {view !== "classic" && (
