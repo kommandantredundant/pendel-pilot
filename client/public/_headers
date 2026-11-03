@@ -1,0 +1,6 @@
+# Cloudflare Pages response headers.
+#
+# NOINDEX — remove before the official release (see README, "Before the official release").
+# Pendel-Pilot is public but not announced yet: search engines should not list it.
+/*
+  X-Robots-Tag: noindex, nofollow

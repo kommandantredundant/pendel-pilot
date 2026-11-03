@@ -73,3 +73,10 @@ It needs two repository secrets (Settings → Secrets and variables → Actions)
 | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (dashboard → Workers & Pages, right-hand side). |
 
 The project name defaults to `pendel-pilot`; set the repository variable `CLOUDFLARE_PAGES_PROJECT_NAME` to use another one.
+
+### Before the official release
+
+The site is public but not announced yet, so search engines are asked not to index it. Remove both before the official release:
+
+- [ ] the `X-Robots-Tag: noindex, nofollow` block in `client/public/_headers`
+- [ ] the `<meta name="robots" content="noindex, nofollow">` tag in `client/index.html`
