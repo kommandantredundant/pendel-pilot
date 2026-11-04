@@ -93,6 +93,7 @@ export function BottomNav() {
       `}
       role="navigation"
       aria-label="Main navigation"
+      data-bottom-nav
     >
       <div className="flex items-center justify-around px-2 py-2 md:py-3">
         {navItems.map((item) => {
@@ -139,5 +140,36 @@ export function BottomNav() {
         })}
       </div>
     </nav>
+  );
+}
+
+/**
+ * The same three destinations as a compact row for the title bar. Planner uses it on wide screens instead
+ * of the floating bottom bar, so the timeline gets the full height.
+ */
+export function TopNavLinks() {
+  const [location] = useLocation();
+  const { language } = useLanguage();
+  const currentPath = location.split("?")[0];
+  return (
+    <div className="flex items-center gap-1" role="navigation" aria-label="Main navigation">
+      {navItems.map((item) => {
+        const isActive = currentPath === item.path;
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.path}
+            href={item.path}
+            aria-current={isActive ? "page" : undefined}
+            className={`flex items-center gap-2 h-9 px-3 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+              isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            <Icon className="w-4 h-4" aria-hidden="true" />
+            {t(item.labelKey, language)}
+          </Link>
+        );
+      })}
+    </div>
   );
 }

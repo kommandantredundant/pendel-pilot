@@ -54,7 +54,7 @@ export function providerLegalNotices(): ProviderLegalNotice[] {
 }
 
 // Identifies this application to providers that use a User-Agent for policy or support contact.
-export const PENDEL_PILOT_USER_AGENT = 'PendelPilot/0.1.4 (+https://github.com/kommandantredundant/pendel-pilot)';
+export const PENDEL_PILOT_USER_AGENT = 'PendelPilot/0.1.5 (+https://github.com/kommandantredundant/pendel-pilot)';
 
 export class ProviderTimeoutError extends Error {
   constructor(readonly provider: ProviderName, readonly timeoutMs: number) {

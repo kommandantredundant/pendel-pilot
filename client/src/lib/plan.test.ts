@@ -10,6 +10,9 @@ import {
   doorToDoorMinutes,
   transferCount,
   earlierAnchor,
+  connectionKey,
+  dropDominated,
+  fittingRowCount,
   lanedSegments,
   mergeSuggestions,
   reachableBy,
@@ -204,4 +207,43 @@ test("result pages merge without repeating a connection", () => {
   const b = suggestion(20, [[30, 60]]);
   const c = suggestion(40, [[50, 80]]);
   assert.deepEqual(mergeSuggestions([a, b], [b, c]), [a, b, c]);
+});
+
+test("connections sharing their first train get different keys", () => {
+  const fast = suggestion(0, [[10, 30], [33, 50]]);
+  const slow = suggestion(0, [[10, 30], [40, 70]]);
+  assert.notEqual(connectionKey(fast), connectionKey(slow));
+  assert.equal(connectionKey(fast), connectionKey(suggestion(0, [[10, 30], [33, 50]])));
+});
+
+test("dominated connections are dropped: same first train with a slower onward connection", () => {
+  // Like four RE1 15:10 variants: same departure, arriving at different times.
+  const best = suggestion(0, [[10, 30], [33, 50]]);
+  const slower = suggestion(0, [[10, 30], [40, 70]]);
+  const moreChanges = suggestion(0, [[10, 20], [22, 35], [37, 50]]);
+  const laterButFaster = suggestion(20, [[30, 45]]); // leaves later and arrives earlier: dominates best too
+  assert.deepEqual(dropDominated([best, slower, moreChanges]), [best]);
+  assert.deepEqual(dropDominated([best, slower, laterButFaster]), [laterButFaster]);
+  // Leaving earlier but arriving earlier: both stay.
+  const early = suggestion(0, [[10, 40]]);
+  const late = suggestion(20, [[30, 60]]);
+  assert.deepEqual(dropDominated([early, late]), [early, late]);
+  // Exact duplicates keep the first one.
+  assert.deepEqual(dropDominated([early, suggestion(0, [[10, 40]])]), [early]);
+});
+
+test("'now' keeps the missed connection on top even when ordering by another mode", () => {
+  const now = BASE + 30 * 60_000;
+  const missed = suggestion(10, [[20, 50]]);
+  const a = suggestion(40, [[48, 70]]);
+  const b = suggestion(35, [[50, 80]]);
+  assert.deepEqual(selectNowRows([a, b, missed], ["bike"], now, 3, "bike"), [missed, b, a]);
+});
+
+test("the fitting row count follows the measured space and row height", () => {
+  assert.equal(fittingRowCount(700, 100), 7);
+  assert.equal(fittingRowCount(699, 100), 6);
+  assert.equal(fittingRowCount(150, 100), 1); // small windows: fewer rows rather than scrolling
+  assert.equal(fittingRowCount(40, 100), 1);
+  assert.equal(fittingRowCount(5000, 100), 12); // never more than one request loads
 });

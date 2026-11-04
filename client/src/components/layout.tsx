@@ -7,7 +7,7 @@ import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 import { useActiveView } from "@/hooks/use-active-view";
-import { BottomNav } from "@/components/bottom-nav";
+import { BottomNav, TopNavLinks } from "@/components/bottom-nav";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { TrainIcon } from "@/components/train-icon";
 
@@ -46,10 +46,15 @@ export function Layout({ children }: LayoutProps) {
               )}
             </span>
           </div>
+          {wide && (
+            <div className="ml-auto">
+              <TopNavLinks />
+            </div>
+          )}
           <button
             type="button"
             onClick={cycle}
-            className="ml-auto w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className={cn(wide ? "ml-2" : "ml-auto", "w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors")}
             aria-label={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
             title={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
           >
@@ -59,7 +64,8 @@ export function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* Main Content Area */}
-      <main className={cn("flex-1 p-4 md:p-8 pb-24 md:pb-32 w-full mx-auto", width)}>
+      {/* Planner fits the screen: no floating bottom bar to keep clear of (its links sit in the title bar). */}
+      <main className={cn("flex-1 w-full mx-auto", wide ? "px-8 pt-5 pb-5" : "p-4 md:p-8 pb-24 md:pb-32", width)}>
         <ErrorBoundary>
           <motion.div
             key={location}
@@ -72,8 +78,22 @@ export function Layout({ children }: LayoutProps) {
             {children}
           </motion.div>
         </ErrorBoundary>
-        {/* Required by the Transitous usage policy: visible link to its data sources. */}
-        <p className="mt-8 text-center text-xs text-muted-foreground">
+        {/* Required by the Transitous usage policy: visible link to its data sources.
+            Planner fits the screen and shows the same links in its own bottom line. */}
+        {!wide && <DataSources className="mt-8 text-center" />}
+      </main>
+
+      {/* Bottom Navigation */}
+      {!wide && <BottomNav />}
+    </div>
+  );
+}
+
+/** Data source links required by the Transitous usage policy (plus OpenStreetMap attribution). */
+export function DataSources({ className }: { className?: string }) {
+  const { language } = useLanguage();
+  return (
+        <p className={cn("text-xs text-muted-foreground", className)}>
           {t('footer.data', language)}{" "}
           <a href="https://transitous.org/sources/" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
             {t('footer.sources', language)}
@@ -83,10 +103,5 @@ export function Layout({ children }: LayoutProps) {
             © OpenStreetMap
           </a>
         </p>
-      </main>
-
-      {/* Bottom Navigation */}
-      <BottomNav />
-    </div>
   );
 }
