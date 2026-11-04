@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import type { Language } from './i18n';
+import { detectLanguage, type Language } from './i18n';
 
 interface LanguageContextType {
   language: Language;
@@ -9,19 +9,29 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en');
-
-  // Initialize from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('language') as Language;
-    if (stored) {
-      setLanguage(stored);
+  // A stored choice wins; otherwise follow the browser's language (German or English).
+  const [language, setLanguage] = useState<Language>(() => {
+    try {
+      const stored = localStorage.getItem('language');
+      if (stored === 'en' || stored === 'de') return stored;
+    } catch {
+      // Storage may be unavailable (private mode).
     }
-  }, []);
+    return detectLanguage(typeof navigator !== 'undefined' ? navigator.languages : undefined);
+  });
+
+  // Screen readers and hyphenation follow the page language.
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang);
-    localStorage.setItem('language', lang);
+    try {
+      localStorage.setItem('language', lang);
+    } catch {
+      // The choice then lasts for this page view.
+    }
   };
 
   return (

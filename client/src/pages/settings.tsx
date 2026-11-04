@@ -80,14 +80,15 @@ export default function SettingsPage() {
       planMode: 0,
       stationModeFromHome: "both",
       stationModeFromWork: "both",
-      language: "en",
+      // First setup starts with the language the app is shown in (stored choice or browser language).
+      language,
     },
   });
 
   useEffect(() => {
     if (settings) {
       form.reset(settings);
-      setLanguage((settings.language as Language) || "en");
+      setLanguage((settings.language as Language) || language);
     }
     // Only sync from DB on initial settings load, not on every language change
     // eslint-disable-next-line react-hooks/exhaustive-deps
