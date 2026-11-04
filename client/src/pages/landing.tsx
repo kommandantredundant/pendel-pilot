@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import {
-  ArrowLeftRight,
   ArrowRight,
   Bike,
   Check,
@@ -23,7 +22,6 @@ import { t, type Language } from "@/lib/i18n";
 const GITHUB_URL = "https://github.com/kommandantredundant/pendel-pilot";
 
 const FEATURES = [
-  { key: "directions", icon: ArrowLeftRight },
   { key: "modes", icon: Bike },
   { key: "realtime", icon: Radio },
   { key: "glance", icon: Timer },
@@ -78,7 +76,7 @@ export default function LandingPage() {
         {/* Who it is for */}
         <Section title={l("for.title")}>
           <ul className="space-y-3">
-            {[1, 2, 3].map((n) => (
+            {[1, 2, 3, 4, 5].map((n) => (
               <ListItem key={n} icon="check">{l(`for.${n}`)}</ListItem>
             ))}
           </ul>
@@ -123,7 +121,6 @@ export default function LandingPage() {
 
         {/* Who it is not for, and what to use instead */}
         <Section title={l("notfor.title")}>
-          <p className="text-muted-foreground mb-5">{l("notfor.lead")}</p>
           <div className="grid gap-4 md:grid-cols-3">
             <AlternativeCard title={l("notfor.operators.title")}>
               <p>{l("notfor.operators.desc")}</p>

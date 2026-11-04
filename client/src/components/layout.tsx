@@ -95,7 +95,7 @@ export function DataSources({ className }: { className?: string }) {
           </a>
           {" "}·{" "}
           <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
-            © OpenStreetMap
+            © {t('footer.osm', language)}
           </a>
         </p>
   );
