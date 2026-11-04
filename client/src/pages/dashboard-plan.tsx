@@ -29,6 +29,8 @@ import {
   PLAN_TIME_ZONE,
   sortByLeaveTime,
   planRowCount,
+  reachableBy,
+  selectNowRows,
   timeAxis,
   timelineModes,
   transferCount,
@@ -133,7 +135,22 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
   const rows = usePlanRows();
   const { data: journeys, isLoading, isFetching, isError, error, refresh } = usePlanJourneys(destination, anchor, !includeLongDistance, rows);
 
-  const sorted = useMemo(() => (journeys ? sortByLeaveTime(journeys, lead) : []), [journeys, lead]);
+  // "Now" shows what can still be made (plus the last missed one); a chosen time shows the timetable as it is.
+  const sorted = useMemo(() => {
+    if (!journeys) return [];
+    const shown = anchor.kind === "now" ? selectNowRows(journeys, timelineModes(mode), now, rows) : journeys;
+    return sortByLeaveTime(shown, lead);
+  }, [journeys, anchor.kind, mode, now, rows, lead]);
+
+  // As time passes, connections drop out of "now"; reload quietly (at most once a minute) to refill the list.
+  const lastRefill = useRef(0);
+  const reachableShown = sorted.filter((suggestion) => reachableBy(suggestion, timelineModes(mode), now)).length;
+  useEffect(() => {
+    if (anchor.kind !== "now" || !journeys || isFetching || reachableShown >= rows - 1) return;
+    if (Date.now() - lastRefill.current < 60_000) return;
+    lastRefill.current = Date.now();
+    refresh();
+  }, [anchor.kind, journeys, isFetching, reachableShown, rows, refresh]);
   const axis = useMemo(() => timeAxis(sorted, mode), [sorted, mode]);
 
   const resetToNow = useCallback(() => {
@@ -143,14 +160,15 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
     setPage(null);
   }, [today]);
 
+  // Page from what is on screen, so "Later" continues right after the last row shown.
   const pageEarlier = useCallback(() => {
-    const next = journeys && earlierAnchor(journeys);
+    const next = earlierAnchor(sorted);
     if (next) setPage(next);
-  }, [journeys]);
+  }, [sorted]);
   const pageLater = useCallback(() => {
-    const next = journeys && laterAnchor(journeys);
+    const next = laterAnchor(sorted);
     if (next) setPage(next);
-  }, [journeys]);
+  }, [sorted]);
 
   const toggleLongDistance = useCallback(
     (include: boolean) => {

@@ -2,6 +2,12 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## 0.1.4
+
+- **"Now" means leaving now:** Planner's "Now" view lists the connections you can still make on foot or by bike, including those that need you to hurry, and above them at most the one you just missed. Trains you would have had to leave for already no longer fill the list.
+- **Topped up automatically:** when "now" connections fall out of reach, Planner loads further ones in the background, so the list stays full.
+- **Earlier/Later from what you see:** paging continues right after (or before) the rows on screen.
+
 ## 0.1.3
 
 - **Planner on large screens:** Planner now uses the full window width instead of stopping at 1536 px, so the timeline grows with the display. Taller windows show more connections: 6 on a 13" laptop, up to 12 on large screens.
