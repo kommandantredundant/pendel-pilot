@@ -121,6 +121,7 @@ export default function LandingPage() {
 
         {/* Who it is not for, and what to use instead */}
         <Section title={l("notfor.title")}>
+          <p className="text-muted-foreground mb-5">{l("notfor.lead")}</p>
           <div className="grid gap-4 md:grid-cols-3">
             <AlternativeCard title={l("notfor.operators.title")}>
               <p>{l("notfor.operators.desc")}</p>
