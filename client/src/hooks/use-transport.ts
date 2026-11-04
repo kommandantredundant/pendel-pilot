@@ -9,8 +9,8 @@ import { laterAnchor, mergeSuggestions, reachableBy } from "@/lib/plan";
 /** Transitous returns no stops for one- or two-letter prefixes. */
 export const STATION_SEARCH_MIN_CHARS = 3;
 
-/** Number of connection options requested from /api/journeys/calculate. */
-const JOURNEY_RESULTS = 5;
+/** Number of connection options requested from /api/journeys/calculate by the classic view and Glance. */
+export const JOURNEY_RESULTS = 5;
 
 interface ApiStation {
   id: string;
@@ -285,7 +285,11 @@ export function useJourneysWithRefresh(
 ) {
   const query = useQuery({
     queryKey: ["transport", "journeys", destination, timePlanning, arrivalDeparture, selectedTime],
-    queryFn: () => fetchJourneys(destination, timePlanning, arrivalDeparture, selectedTime),
+    // "Now" pages on until enough connections can still be made (see fetchPlanJourneys).
+    queryFn: () =>
+      timePlanning === "now"
+        ? fetchPlanJourneys(destination, { kind: "now" }, undefined, JOURNEY_RESULTS)
+        : fetchJourneys(destination, timePlanning, arrivalDeparture, selectedTime),
     refetchInterval: 300000, // 5 minutes
     refetchIntervalInBackground: false,
   });
@@ -301,14 +305,15 @@ export function useJourneysWithRefresh(
 const NOW_FILL_PAGES = 2;
 
 /**
- * Planner request. For "now", trains leaving in the next minutes are often out of reach already (you
+ * "Now" request for every view. For "now", trains leaving in the next minutes are often out of reach already (you
  * have to leave home before them), so the request pages on until `results` connections remain that walk
  * or bike can still make; the view then shows those plus the most recently missed one.
  */
 export async function fetchPlanJourneys(
   destination: "work" | "home",
   anchor: JourneyAnchor,
-  excludeLongDistance: boolean,
+  /** Undefined uses the saved preference. */
+  excludeLongDistance: boolean | undefined,
   results: number,
   now: () => number = Date.now
 ): Promise<CommuteSuggestion[]> {

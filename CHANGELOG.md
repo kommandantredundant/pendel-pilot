@@ -5,6 +5,7 @@ Publishing a GitHub release deploys that version to Cloudflare Pages (see README
 ## 0.1.4
 
 - **"Now" means leaving now:** Planner's "Now" view lists the connections you can still make on foot or by bike, including those that need you to hurry, and above them at most the one you just missed. Trains you would have had to leave for already no longer fill the list.
+- **Same in the classic view:** its "Now" list also shows only connections you can still make with your usual way to the station (both ways when set to spontaneous), plus the one just missed. Glance gets the same top-up, so it finds the next reachable connection more often.
 - **Topped up automatically:** when "now" connections fall out of reach, Planner loads further ones in the background, so the list stays full.
 - **Earlier/Later from what you see:** paging continues right after (or before) the rows on screen.
 

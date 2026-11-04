@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw } from "lucide-react";
 import type { CommuteSuggestion } from "@shared/routes";
 import { usePlanJourneys, type JourneyAnchor } from "@/hooks/use-transport";
+import { useNowRefill } from "@/hooks/use-now-refill";
 import { useSettings } from "@/hooks/use-settings";
 import { ErrorDisplay } from "@/components/error-display";
 import { cn } from "@/components/layout";
@@ -142,15 +143,14 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
     return sortByLeaveTime(shown, lead);
   }, [journeys, anchor.kind, mode, now, rows, lead]);
 
-  // As time passes, connections drop out of "now"; reload quietly (at most once a minute) to refill the list.
-  const lastRefill = useRef(0);
-  const reachableShown = sorted.filter((suggestion) => reachableBy(suggestion, timelineModes(mode), now)).length;
-  useEffect(() => {
-    if (anchor.kind !== "now" || !journeys || isFetching || reachableShown >= rows - 1) return;
-    if (Date.now() - lastRefill.current < 60_000) return;
-    lastRefill.current = Date.now();
-    refresh();
-  }, [anchor.kind, journeys, isFetching, reachableShown, rows, refresh]);
+  useNowRefill({
+    active: anchor.kind === "now",
+    hasData: !!journeys,
+    isFetching,
+    reachable: sorted.filter((suggestion) => reachableBy(suggestion, timelineModes(mode), now)).length,
+    target: rows,
+    refresh,
+  });
   const axis = useMemo(() => timeAxis(sorted, mode), [sorted, mode]);
 
   const resetToNow = useCallback(() => {
