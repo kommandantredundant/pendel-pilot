@@ -106,6 +106,9 @@ export function ErrorDisplay({
         <p className="text-sm text-muted-foreground mt-2">
           {appError.getWhatToCheck(language)}
         </p>
+        {appError.getTechnicalDetail() && (
+          <p className="text-xs text-muted-foreground/80 mt-2 font-mono break-words">{appError.getTechnicalDetail()}</p>
+        )}
         {showFixAction && appError.fixRoute && (
           <div className="mt-4">
             {onFixAction ? (

@@ -214,3 +214,27 @@ describe('provider clients', () => {
   });
 
 });
+
+describe('provider failures at the API boundary', () => {
+  it('answers a failing Photon lookup with a 503 envelope naming the cause instead of a bare 500', async () => {
+    const { onRequestGet } = await import('../functions/api/addresses/geocode.ts');
+    const originalFetch = globalThis.fetch;
+    const originalError = console.error;
+    console.error = () => {};
+    globalThis.fetch = (async () => new Response('blocked', { status: 403 })) as typeof fetch;
+    try {
+      const response = await (onRequestGet as unknown as (context: { request: Request }) => Promise<Response>)({
+        request: new Request('https://example.test/api/addresses/geocode?q=Domplatz%2010&limit=1')
+      });
+      assert.equal(response.status, 503);
+      const body = (await response.json()) as { success: boolean; error: { code: string; message: string; details: unknown } };
+      assert.equal(body.success, false);
+      assert.equal(body.error.code, 'UPSTREAM_UNAVAILABLE');
+      assert.match(body.error.message, /photon responded with HTTP 403/);
+      assert.deepEqual(body.error.details, { provider: 'photon', timeout: false });
+    } finally {
+      globalThis.fetch = originalFetch;
+      console.error = originalError;
+    }
+  });
+});

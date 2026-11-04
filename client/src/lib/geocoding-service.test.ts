@@ -52,10 +52,37 @@ test("geocodeAddress throws geocoding-rate-limit error on 429 status", async () 
   await assert.rejects(() => geocodeAddress("Berlin"), rejectsWith(ErrorType.GEOCODING_RATE_LIMIT));
 });
 
-test("geocodeAddress throws geocoding-network error on 5xx status or failed fetch", async () => {
-  globalThis.fetch = respond(502, { success: false, error: { code: "UPSTREAM", message: "Bad gateway" } });
-  await assert.rejects(() => geocodeAddress("Berlin"), rejectsWith(ErrorType.GEOCODING_NETWORK));
+test("geocodeAddress throws geocoding-network error on 5xx status or failed fetch, after one retry", async () => {
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    return new Response(JSON.stringify({ success: false, error: { code: "UPSTREAM_UNAVAILABLE", message: "photon responded with HTTP 403." } }), { status: 503 });
+  }) as typeof fetch;
+  await assert.rejects(() => geocodeAddress("Berlin", 0), rejectsWith(ErrorType.GEOCODING_NETWORK));
+  assert.equal(calls, 2);
 
   globalThis.fetch = (async () => { throw new TypeError("Failed to fetch"); }) as typeof fetch;
-  await assert.rejects(() => geocodeAddress("Berlin"), rejectsWith(ErrorType.GEOCODING_NETWORK));
+  await assert.rejects(() => geocodeAddress("Berlin", 0), rejectsWith(ErrorType.GEOCODING_NETWORK));
+});
+
+test("geocodeAddress succeeds when the retry after an upstream failure works", async () => {
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    return calls === 1
+      ? new Response(JSON.stringify({ success: false, error: { code: "UPSTREAM_UNAVAILABLE", message: "timed out" } }), { status: 504 })
+      : new Response(JSON.stringify({ success: true, data: [{ name: "Domplatz", coordinates: { latitude: 51.96, longitude: 7.62 } }] }));
+  }) as typeof fetch;
+  assert.deepEqual(await geocodeAddress("Domplatz 10, Münster", 0), { lat: 51.96, lon: 7.62 });
+  assert.equal(calls, 2);
+});
+
+test("geocodeAddress does not retry when the address is simply not found", async () => {
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    return new Response(JSON.stringify({ success: true, data: [] }));
+  }) as typeof fetch;
+  await assert.rejects(() => geocodeAddress("Nowhere", 0), rejectsWith(ErrorType.GEOCODING_NOT_FOUND));
+  assert.equal(calls, 1);
 });

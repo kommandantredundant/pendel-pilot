@@ -1,7 +1,7 @@
 import { HttpTransitousClient } from '../../../src/clients/transitous.client.ts';
 import { PROVIDER_POLICIES } from '../../../src/clients/providerCompliance.ts';
 import { StationSearchService } from '../../../src/services/stationSearch.service.ts';
-import { json, validationError } from '../../../src/utils/http.ts';
+import { json, upstreamError, validationError } from '../../../src/utils/http.ts';
 
 export const onRequestGet: PagesFunction = async ({ request }) => {
   const url = new URL(request.url);
@@ -15,7 +15,7 @@ export const onRequestGet: PagesFunction = async ({ request }) => {
     if (error instanceof RangeError) {
       return validationError(error.message);
     }
-    throw error;
+    return upstreamError('transitous', error);
   }
 };
 

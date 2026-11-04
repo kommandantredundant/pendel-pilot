@@ -35,7 +35,9 @@ export async function resolveAddressCoordinates(
     };
   }
 
-  const [home, work] = await Promise.all([geocodeAddress(settings.homeAddress), geocodeAddress(settings.workAddress)]);
+  // One after the other: the public Photon instance asks for moderate use and refuses bursts.
+  const home = await geocodeAddress(settings.homeAddress);
+  const work = await geocodeAddress(settings.workAddress);
 
   return {
     homeLat: home.lat,

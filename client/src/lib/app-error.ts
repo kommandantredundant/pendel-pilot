@@ -127,6 +127,13 @@ export class AppError extends Error {
   }
 
   /**
+   * Technical cause for testers and bug reports, e.g. "photon responded with HTTP 403." or "Failed to fetch".
+   */
+  getTechnicalDetail(): string | undefined {
+    return this.cause instanceof Error && this.cause.message ? this.cause.message : undefined;
+  }
+
+  /**
    * Get the localized "what to check" message
    */
   getWhatToCheck(language: Language): string {

@@ -2,6 +2,12 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## 0.1.2
+
+- **Saving with address lookup problems:** if the address lookup (Photon) fails or times out, the app now retries once and looks up home and work one after the other instead of at the same time. If it still fails, the message explains what went wrong in plain language and names the technical cause (for example "photon responded with HTTP 403."), instead of showing "geocoding-network".
+- **Honest save feedback:** "Settings saved" now appears only once the addresses are found and the profile is stored. Before, it showed immediately, and on first setup the app moved on to the dashboard even if saving failed in the background.
+- **Clear API errors:** when Photon or Transitous fail, address and station search answer with a reason (503, or 504 on timeout) instead of a bare 500, and the cause is logged for Cloudflare.
+
 ## 0.1.1
 
 - **Planner:** the desktop planning view is now called Planner (title bar "Pendel-Pilot PLANNER", settings card "Planner"). Saved settings carry over unchanged.
