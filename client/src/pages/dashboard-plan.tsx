@@ -371,6 +371,8 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
 
       {/* Connections */}
       <section className="bg-card rounded-xl border border-border/70 shadow-sm">
+        {/* Column header and rows share one "now" line, drawn once over the timeline column. */}
+        <div className="relative">
         <div className={cn(ROW_GRID, "px-5 pt-3 pb-2 border-b border-border/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground")}>
           <span>{t("plan.col.leave", language)}</span>
           <div>
@@ -409,6 +411,8 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
             ))}
           </ol>
         )}
+        </div>
+        {axis && sorted.length > 0 && <NowLine axis={axis} now={now} />}
         </div>
 
         <div className="flex items-center justify-between gap-4 px-5 py-3 border-t border-border/70">
@@ -721,7 +725,6 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
   const { language } = useLanguage();
   const [barRef, barWidth] = useElementWidth<HTMLDivElement>();
   const segments = lanedSegments(suggestion, mode);
-  const showNow = now > axis.start && now < axis.end;
   const split = mode === "both";
   const legs = suggestion.journey.legs;
   const transferSegments = segments.filter((segment): segment is Extract<typeof segment, { kind: "transfer" }> => segment.kind === "transfer");
@@ -806,7 +809,6 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
             <span className="sr-only">{transferLabel(segment, language)}</span>
           </span>
         ))}
-        {showNow && <span className="absolute -top-0.5 -bottom-0.5 w-0.5 bg-hurry rounded-full" style={{ left: `${axisPercent(axis, now)}%` }} />}
       </div>
     </div>
   );
@@ -860,6 +862,22 @@ function RideSegment({
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * The current time as one continuous line from the axis labels down through every row. It sits in an
+ * overlay with the same grid as the rows, so its column lines up with each row's timeline.
+ */
+function NowLine({ axis, now }: { axis: TimeAxis; now: number }) {
+  if (now <= axis.start || now >= axis.end) return null;
+  return (
+    <div className={cn(ROW_GRID, "absolute inset-0 px-5 pointer-events-none")} aria-hidden>
+      <span />
+      <div className="relative h-full">
+        <span className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-hurry" style={{ left: `${axisPercent(axis, now)}%` }} />
+      </div>
+    </div>
   );
 }
 
