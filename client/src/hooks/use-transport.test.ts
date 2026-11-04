@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fetchJourneys, toCommuteSuggestion } from "./use-transport";
+import { fetchJourneys, fetchPlanJourneys, toCommuteSuggestion } from "./use-transport";
 import { AppError, ErrorType, isAppError } from "../lib/app-error";
 
 const sampleSettings = {
@@ -226,3 +226,60 @@ function sampleOption(lineName: string, direction: "work" | "home" = "work") {
     },
   };
 }
+
+const PLAN_BASE = Date.parse("2026-04-10T05:00:00.000Z");
+const planAt = (minutes: number) => new Date(PLAN_BASE + minutes * 60_000).toISOString();
+
+/** Train leaving at `minute`; walking leaves home 20 min before it, cycling 10 min before. */
+function optionAt(minute: number) {
+  const departureTime = planAt(minute);
+  const arrivalTime = planAt(minute + 20);
+  return {
+    lineName: `RE ${minute}`,
+    legs: [{ lineName: `RE ${minute}`, departureTime, arrivalTime }],
+    journey: {
+      homeStation: { id: "a", name: "A", lat: 52.4, lon: 13.3 },
+      workStation: { id: "b", name: "B", lat: 52.5, lon: 13.4 },
+      transportWork: { departureTime, arrivalTime },
+      routeHomeWalkSec: 1080,
+      routeHomeBikeSec: 480,
+      routeWorkWalkSec: 300,
+      routeWorkBikeSec: 120,
+      homeAddressWalkTime: planAt(minute - 20),
+      homeAddressBikeTime: planAt(minute - 10),
+      workAddressWalkTime: planAt(minute + 25),
+      workAddressBikeTime: planAt(minute + 22),
+    },
+  };
+}
+
+test("fetchPlanJourneys for 'now' loads further pages until enough connections can still be made", async () => {
+  (globalThis as any).window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sampleSettings));
+  const bodies: any[] = [];
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body));
+    bodies.push(body);
+    // First page: trains at 5 and 8 are out of reach at minute 0, only the one at 25 can be made.
+    const minutes = bodies.length === 1 ? [5, 8, 25] : [30, 40, 50];
+    return new Response(JSON.stringify({ success: true, data: { options: minutes.map(optionAt) } }));
+  }) as unknown as typeof fetch;
+
+  const list = await fetchPlanJourneys("work", { kind: "now" }, false, 3, () => PLAN_BASE);
+
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[1].departureTime, planAt(26)); // one minute after the last train of the first page
+  assert.equal(bodies[1].results, 3);
+  assert.deepEqual(list.map((s) => s.journey.lineName), ["RE 5", "RE 8", "RE 25", "RE 30", "RE 40", "RE 50"]);
+});
+
+test("fetchPlanJourneys does not page for an explicit departure time", async () => {
+  (globalThis as any).window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sampleSettings));
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    return new Response(JSON.stringify({ success: true, data: { options: [optionAt(5)] } }));
+  }) as unknown as typeof fetch;
+
+  await fetchPlanJourneys("work", { kind: "departure", time: planAt(0) }, false, 6, () => PLAN_BASE + 60 * 60_000);
+  assert.equal(calls, 1);
+});

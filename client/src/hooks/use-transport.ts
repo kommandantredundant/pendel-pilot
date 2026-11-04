@@ -3,6 +3,8 @@ import type { CommuteSuggestion, Station } from "@shared/routes";
 import { loadSettings } from "@/lib/settings-storage";
 import { ErrorFactory, isAppError } from "@/lib/app-error";
 import { apiGet, apiPost } from "@/lib/api-client";
+import { TRAVEL_MODES } from "@/lib/glance";
+import { laterAnchor, mergeSuggestions, reachableBy } from "@/lib/plan";
 
 /** Transitous returns no stops for one- or two-letter prefixes. */
 export const STATION_SEARCH_MIN_CHARS = 3;
@@ -295,6 +297,33 @@ export function useJourneysWithRefresh(
   };
 }
 
+/** Extra pages "now" may load to fill the planner with connections that can still be made. */
+const NOW_FILL_PAGES = 2;
+
+/**
+ * Planner request. For "now", trains leaving in the next minutes are often out of reach already (you
+ * have to leave home before them), so the request pages on until `results` connections remain that walk
+ * or bike can still make; the view then shows those plus the most recently missed one.
+ */
+export async function fetchPlanJourneys(
+  destination: "work" | "home",
+  anchor: JourneyAnchor,
+  excludeLongDistance: boolean,
+  results: number,
+  now: () => number = Date.now
+): Promise<CommuteSuggestion[]> {
+  let list = await fetchJourneysAt(destination, anchor, { results, excludeLongDistance });
+  if (anchor.kind !== "now") return list;
+
+  for (let page = 0; page < NOW_FILL_PAGES; page++) {
+    const reachable = list.filter((suggestion) => reachableBy(suggestion, TRAVEL_MODES, now())).length;
+    const next = laterAnchor(list);
+    if (reachable >= results || !next) break;
+    list = mergeSuggestions(list, await fetchJourneysAt(destination, next, { results, excludeLongDistance }));
+  }
+  return list;
+}
+
 /**
  * Journeys for the desktop planning view: explicit time anchor (paging moves it) and long-distance filter,
  * keeping the previous list on screen while the next page loads.
@@ -307,7 +336,7 @@ export function usePlanJourneys(
 ) {
   const query = useQuery({
     queryKey: ["transport", "plan", destination, anchor, excludeLongDistance, results],
-    queryFn: () => fetchJourneysAt(destination, anchor, { results, excludeLongDistance }),
+    queryFn: () => fetchPlanJourneys(destination, anchor, excludeLongDistance, results),
     placeholderData: keepPreviousData,
     refetchInterval: 300000,
     refetchIntervalInBackground: false,

@@ -11,6 +11,9 @@ import {
   transferCount,
   earlierAnchor,
   lanedSegments,
+  mergeSuggestions,
+  reachableBy,
+  selectNowRows,
   planRowCount,
   laterAnchor,
   sortByLeaveTime,
@@ -179,4 +182,26 @@ test("door-to-door time runs from leaving home to arriving, per mode; transfers 
   assert.equal(doorToDoorMinutes(s, "walk"), 74); // leave 28 - 20, arrive 70 + 12
   assert.equal(transferCount(s), 1);
   assert.equal(transferCount(suggestion(0, [[10, 60]])), 0);
+});
+
+test("'now' keeps the connections still reachable and only the most recently missed one above them", () => {
+  const now = BASE + 30 * 60_000;
+  // Bike leaves at the first number; walking leaves 20 minutes before the train.
+  const gone = suggestion(0, [[10, 40]]); // bike 0, walk -10: missed both ways
+  const lastGone = suggestion(10, [[20, 50]]); // bike 10, walk 0: missed
+  const hurryBike = suggestion(30 - 0.5, [[38, 60]]); // bike left 30 s ago: still makeable by hurrying
+  const later = [40, 50, 60, 70].map((leave) => suggestion(leave, [[leave + 8, leave + 40]]));
+  const rows = selectNowRows([...later, gone, hurryBike, lastGone], ["bike"], now, 4);
+  assert.deepEqual(rows, [lastGone, hurryBike, later[0], later[1]]);
+  assert.equal(reachableBy(gone, ["walk", "bike"], now), false);
+  assert.equal(reachableBy(hurryBike, ["walk"], now), false); // walking had to leave at 18
+  // Nothing missed: all rows go to reachable connections.
+  assert.deepEqual(selectNowRows(later, ["bike"], now, 3), later.slice(0, 3));
+});
+
+test("result pages merge without repeating a connection", () => {
+  const a = suggestion(0, [[10, 40]]);
+  const b = suggestion(20, [[30, 60]]);
+  const c = suggestion(40, [[50, 80]]);
+  assert.deepEqual(mergeSuggestions([a, b], [b, c]), [a, b, c]);
 });

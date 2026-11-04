@@ -1,5 +1,5 @@
 import type { CommuteSuggestion } from "@shared/routes";
-import { arriveTime, leaveTime, type ModePreference, type TravelMode } from "./glance";
+import { arriveTime, leaveTime, modeStatus, type ModePreference, type TravelMode } from "./glance";
 import type { JourneyAnchor } from "@/hooks/use-transport";
 
 /**
@@ -161,6 +161,31 @@ const PLAN_ROW_PX = 100;
 export function planRowCount(viewportHeight: number): number {
   const fitting = Math.floor((viewportHeight - PLAN_CHROME_PX) / PLAN_ROW_PX);
   return Math.min(PLAN_MAX_ROWS, Math.max(PLAN_MIN_ROWS, fitting));
+}
+
+/** Still makeable with at least one of the modes, on time or by hurrying. */
+export function reachableBy(suggestion: CommuteSuggestion, modes: TravelMode[], now: number): boolean {
+  return modes.some((mode) => modeStatus(suggestion, mode, now) !== "missed");
+}
+
+/**
+ * "Now" is about leaving, not about the train: keep the connections still reachable with one of the modes,
+ * and above them at most the one most recently missed, as orientation. Fits `rows` in total.
+ */
+export function selectNowRows(suggestions: CommuteSuggestion[], modes: TravelMode[], now: number, rows: number): CommuteSuggestion[] {
+  const byDeparture = [...suggestions].sort((a, b) => ms(a.journey.departure) - ms(b.journey.departure));
+  const missed = byDeparture.filter((suggestion) => !reachableBy(suggestion, modes, now));
+  const reachable = byDeparture.filter((suggestion) => reachableBy(suggestion, modes, now));
+  const lastMissed = missed.at(-1);
+  return lastMissed ? [lastMissed, ...reachable.slice(0, rows - 1)] : reachable.slice(0, rows);
+}
+
+/** Two result pages joined without the connections they share. */
+export function mergeSuggestions(first: CommuteSuggestion[], second: CommuteSuggestion[]): CommuteSuggestion[] {
+  const key = (suggestion: CommuteSuggestion) =>
+    `${suggestion.journey.departure}|${suggestion.journey.legs.map((leg) => leg.lineName).join(">")}`;
+  const seen = new Set(first.map(key));
+  return [...first, ...second.filter((suggestion) => !seen.has(key(suggestion)))];
 }
 
 /** Connections in the order you would leave, so the timeline reads top to bottom. */
