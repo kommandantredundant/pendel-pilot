@@ -4,11 +4,12 @@ Pendel-Pilot plans the daily commute. It combines a home address, home station, 
 
 ## Features
 
+- A start page (`/`) that explains who the app is for, what it does and does not do, and which apps suit other needs.
 - Dashboards for both directions (`/towork`, `/tohome`) with walk and bike times at both ends.
 - Every leg with track and real-time departure.
 - **Glance** — a mobile countdown to the next departure.
 - **Planner** — a desktop timeline for planning ahead.
-- Dark mode, German and English, installable as a web app.
+- Dark mode, German and English (following the browser language until you pick one), installable as a web app.
 
 See the [changelog](./CHANGELOG.md) for what changed in each release.
 

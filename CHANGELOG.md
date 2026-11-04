@@ -2,6 +2,12 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## Unreleased
+
+- **Start page:** `/` now explains Pendel-Pilot: who it is for, what it does and what not, and which apps suit you better for tickets, disruption alerts or changing destinations (operator apps, open-source apps, Transitous). It leads you to the settings to set up your commute, or straight to your commute once it is set up. A short section at the bottom points developers to GitHub.
+- **Home-screen app opens your commute:** the installed web app starts at `/towork` instead of `/`.
+- **Browser language:** until you choose a language in the settings, the app uses your browser's language (German or English) instead of always starting in English.
+
 ## 0.1.5
 
 - **Planner fits the screen:** Planner shows exactly as many connections as fit without scrolling, measured on the actual page. Paging, legend, keyboard shortcuts and the data source links always stay visible at the bottom; use Earlier/Later to see more.
