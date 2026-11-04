@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw } from "lucide-react";
@@ -639,8 +639,27 @@ const LANE_CLASS: Record<Lane, string> = {
   bottom: "top-[calc(50%+1px)] bottom-0.5",
 };
 
+/** Rendered width of an element in px, kept current on resize (0 until measured). */
+function useElementWidth<T extends HTMLElement>(): [React.RefObject<T>, number] {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth));
+    observer.observe(element);
+    setWidth(element.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width];
+}
+
+/** Way segments narrower than this (px) show their mode icon outside: before the way to the station, after the way from it. */
+const WAY_ICON_MIN_PX = { full: 20, split: 16 };
+
 function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSuggestion; mode: TimelineMode; axis: TimeAxis; now: number }) {
   const { language } = useLanguage();
+  const [barRef, barWidth] = useElementWidth<HTMLDivElement>();
   const segments = lanedSegments(suggestion, mode);
   const showNow = now > axis.start && now < axis.end;
   const split = mode === "both";
@@ -650,7 +669,7 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
   return (
     <div>
       {/* Margins hold the labels: departure times above each train, transfer minutes below. */}
-      <div className={cn("relative mt-4 mb-4", split ? "h-9" : "h-7")}>
+      <div ref={barRef} className={cn("relative mt-4 mb-4", split ? "h-9" : "h-7")}>
         {axis.ticks.map((tick) => (
           <span key={tick} className="absolute inset-y-0 w-px bg-border" style={{ left: `${axisPercent(axis, tick)}%` }} />
         ))}
@@ -674,9 +693,12 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
             );
           }
           const way = segment.kind === "access" || segment.kind === "egress";
+          const iconSize = split ? "w-3 h-3" : "w-3.5 h-3.5";
+          // Too short for its icon: the icon moves outside, away from the train, in a colour readable on the row background.
+          const iconOutside = way && barWidth > 0 && (width / 100) * barWidth < (split ? WAY_ICON_MIN_PX.split : WAY_ICON_MIN_PX.full);
           return (
+            <Fragment key={index}>
             <div
-              key={index}
               aria-hidden
               title={segmentTitle(segment, language)}
               className={cn(
@@ -690,8 +712,22 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
               )}
               style={{ left: `${left}%`, width: `${width}%`, ...(segment.kind === "transfer" ? STRIPES : {}) }}
             >
-              {way && <ModeIcon mode={segment.mode} className={cn("shrink-0", split ? "w-3 h-3" : "w-3.5 h-3.5")} />}
+              {way && !iconOutside && <ModeIcon mode={segment.mode} className={cn("shrink-0", iconSize)} />}
             </div>
+            {way && iconOutside && (
+              <span
+                aria-hidden
+                className={cn(
+                  "absolute flex items-center text-muted-foreground",
+                  LANE_CLASS[segment.lane],
+                  segment.kind === "access" ? "-translate-x-full pr-0.5" : "pl-0.5"
+                )}
+                style={{ left: `${segment.kind === "access" ? left : left + width}%` }}
+              >
+                <ModeIcon mode={segment.mode} className={cn("shrink-0", iconSize)} />
+              </span>
+            )}
+            </Fragment>
           );
         })}
         {transferSegments.map((segment, index) => (
