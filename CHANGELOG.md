@@ -5,7 +5,7 @@ Publishing a GitHub release deploys that version to Cloudflare Pages (see README
 ## 0.1.5
 
 - **Planner fits the screen:** Planner shows exactly as many connections as fit without scrolling, measured on the actual page. Paging, legend, keyboard shortcuts and the data source links always stay visible at the bottom; use Earlier/Later to see more.
-- **More room on desktop:** in Planner the navigation (To home, To work, Settings) moves into the title bar instead of floating at the bottom, and the header and rows are more compact, so a 13" laptop shows 5 connections instead of 3.
+- **More room on desktop:** Planner's header is a single line and the rows are more compact, so more connections fit above the bottom navigation.
 - **Fixed jumbled timelines:** when several connections shared their first train, rows could show stale timelines at the wrong position. Each connection now has its own identity.
 - **No pointless variants:** connections that leave no later and arrive no earlier with no fewer transfers than another one (typically the same first train with a slower onward connection) are left out.
 - **Missed connection stays on top:** the one just-missed connection in "Now" always comes first.

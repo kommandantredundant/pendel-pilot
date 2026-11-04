@@ -7,7 +7,7 @@ import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 import { useActiveView } from "@/hooks/use-active-view";
-import { BottomNav, TopNavLinks } from "@/components/bottom-nav";
+import { BottomNav } from "@/components/bottom-nav";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { TrainIcon } from "@/components/train-icon";
 
@@ -46,15 +46,10 @@ export function Layout({ children }: LayoutProps) {
               )}
             </span>
           </div>
-          {wide && (
-            <div className="ml-auto">
-              <TopNavLinks />
-            </div>
-          )}
           <button
             type="button"
             onClick={cycle}
-            className={cn(wide ? "ml-2" : "ml-auto", "w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors")}
+            className={cn("ml-auto w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors")}
             aria-label={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
             title={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
           >
@@ -64,8 +59,8 @@ export function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* Main Content Area */}
-      {/* Planner fits the screen: no floating bottom bar to keep clear of (its links sit in the title bar). */}
-      <main className={cn("flex-1 w-full mx-auto", wide ? "px-8 pt-5 pb-5" : "p-4 md:p-8 pb-24 md:pb-32", width)}>
+      {/* Planner fits the screen above the bottom navigation, so it needs less padding on top. */}
+      <main className={cn("flex-1 w-full mx-auto", wide ? "px-8 pt-5 pb-32" : "p-4 md:p-8 pb-24 md:pb-32", width)}>
         <ErrorBoundary>
           <motion.div
             key={location}
@@ -84,7 +79,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       {/* Bottom Navigation */}
-      {!wide && <BottomNav />}
+      <BottomNav />
     </div>
   );
 }
