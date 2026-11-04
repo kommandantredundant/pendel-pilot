@@ -26,7 +26,6 @@ import {
   lanedSegments,
   laterAnchor,
   leadMode,
-  planMarkers,
   PLAN_TIME_ZONE,
   sortByLeaveTime,
   planRowCount,
@@ -46,7 +45,7 @@ import { DashboardBase } from "./dashboard-base";
 
 /** Leave · timeline · arrive · duration · transfers; the header and every row share it. */
 /** Number columns stay narrow so the timeline gets the width (about 1000 px on a 13" laptop). */
-const ROW_GRID = "grid grid-cols-[4.75rem_minmax(0,1fr)_4.75rem_4.75rem_6.75rem] gap-x-5 items-start";
+const ROW_GRID = "grid grid-cols-[4.75rem_minmax(0,1fr)_4.75rem_4.75rem_5.5rem] gap-x-5 items-start";
 
 const ModeIcon = ({ mode, className }: { mode: TravelMode; className?: string }) =>
   mode === "walk" ? <Footprints className={className} aria-hidden /> : <Bike className={className} aria-hidden />;
@@ -136,7 +135,6 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
 
   const sorted = useMemo(() => (journeys ? sortByLeaveTime(journeys, lead) : []), [journeys, lead]);
   const axis = useMemo(() => timeAxis(sorted, mode), [sorted, mode]);
-  const markers = useMemo(() => planMarkers(sorted, lead), [sorted, lead]);
 
   const resetToNow = useCallback(() => {
     setDate(today);
@@ -352,8 +350,6 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
                 mode={mode}
                 axis={axis}
                 now={now}
-                fastest={markers.fastest.has(index)}
-                fewestTransfers={markers.fewestTransfers.has(index)}
               />
             ))}
           </ol>
@@ -506,16 +502,12 @@ function PlanRow({
   mode,
   axis,
   now,
-  fastest,
-  fewestTransfers,
 }: {
   suggestion: CommuteSuggestion;
   index: number;
   mode: TimelineMode;
   axis: TimeAxis | null;
   now: number;
-  fastest: boolean;
-  fewestTransfers: boolean;
 }) {
   const { language } = useLanguage();
   const both = mode === "both";
@@ -593,7 +585,6 @@ function PlanRow({
             {doorToDoorMinutes(suggestion, travelMode)} <span className="text-xs text-muted-foreground">{t("plan.min", language)}</span>
           </span>
         ))}
-        {fastest && <Marker>{t("plan.fastest", language)}</Marker>}
       </div>
 
       {/* Transfers */}
@@ -604,7 +595,6 @@ function PlanRow({
             <AlertTriangle className={cn("w-4 h-4", TRANSFER_TEXT[worst.status])} aria-label={transferLabel(worst, language)} />
           )}
         </span>
-        {fewestTransfers && <Marker>{t("plan.fewest", language)}</Marker>}
       </div>
     </li>
   );
@@ -625,14 +615,6 @@ function LeaveTime({ suggestion, mode, now }: { suggestion: CommuteSuggestion; m
     >
       <ModeIcon mode={mode} className="w-4 h-4 text-muted-foreground shrink-0" />
       {hhmm(leaveTime(suggestion, mode))}
-    </span>
-  );
-}
-
-function Marker({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex rounded-full bg-primary-tint text-primary px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap">
-      {children}
     </span>
   );
 }

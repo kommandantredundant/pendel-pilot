@@ -8,11 +8,11 @@ import {
   berlinDate,
   berlinIso,
   doorToDoorMinutes,
+  transferCount,
   earlierAnchor,
   lanedSegments,
   planRowCount,
   laterAnchor,
-  planMarkers,
   sortByLeaveTime,
   timeAxis,
   timelineSegments,
@@ -100,20 +100,6 @@ test("legs without arrival times collapse into one ride block", () => {
   assert.deepEqual(transfers(s), []);
 });
 
-test("markers flag the fastest connection and the fewest transfers only when they differ", () => {
-  const direct = suggestion(0, [[10, 60]]); // 65 min door to door
-  const fast = suggestion(20, [[28, 50], [54, 70]]); // 55 min, one transfer
-  const markers = planMarkers([direct, fast], "bike");
-  assert.deepEqual([...markers.fastest], [1]);
-  assert.deepEqual([...markers.fewestTransfers], [0]);
-  assert.equal(doorToDoorMinutes(fast, "bike"), 55);
-
-  const same = planMarkers([direct, suggestion(30, [[40, 90]])], "bike");
-  assert.equal(same.fastest.size, 0);
-  assert.equal(same.fewestTransfers.size, 0);
-  assert.equal(planMarkers([direct], "bike").fastest.size, 0);
-});
-
 test("connections sort by leave time for the chosen mode", () => {
   const a = suggestion(30, [[40, 60]]);
   const b = suggestion(5, [[15, 50]]);
@@ -185,4 +171,12 @@ test("the planner shows 6 connections on short screens and up to 12 on tall ones
   assert.equal(planRowCount(1300), 8); // 1440p desktop
   assert.equal(planRowCount(1600), 11);
   assert.equal(planRowCount(2400), 12); // 4K, capped
+});
+
+test("door-to-door time runs from leaving home to arriving, per mode; transfers count the changes", () => {
+  const s = suggestion(20, [[28, 50], [54, 70]]);
+  assert.equal(doorToDoorMinutes(s, "bike"), 55); // leave 20, arrive 70 + 5
+  assert.equal(doorToDoorMinutes(s, "walk"), 74); // leave 28 - 20, arrive 70 + 12
+  assert.equal(transferCount(s), 1);
+  assert.equal(transferCount(suggestion(0, [[10, 60]])), 0);
 });

@@ -3,8 +3,7 @@ import { arriveTime, leaveTime, type ModePreference, type TravelMode } from "./g
 import type { JourneyAnchor } from "@/hooks/use-transport";
 
 /**
- * Pure helpers for the desktop planning view ("Planner"): door-to-door timeline segments, comparison
- * markers, transfer warnings, the shared time axis, and Europe/Berlin date handling for the planning bar.
+ * Pure helpers for the desktop planning view ("Planner"): door-to-door timeline segments, transfer warnings, the shared time axis, and Europe/Berlin date handling for the planning bar.
  */
 
 export const PLAN_TIME_ZONE = "Europe/Berlin";
@@ -43,7 +42,7 @@ export function timelineModes(mode: TimelineMode): TravelMode[] {
   return mode === "both" ? ["walk", "bike"] : [mode];
 }
 
-/** Mode used for sorting, markers and dimming; with both lanes the faster bike leads. */
+/** Mode used for sorting and dimming; with both lanes the faster bike leads. */
 export function leadMode(mode: TimelineMode): TravelMode {
   return mode === "both" ? "bike" : mode;
 }
@@ -148,32 +147,6 @@ export function lanedSegments(suggestion: CommuteSuggestion, mode: TimelineMode)
     .filter((segment) => !isWay(segment))
     .map((segment) => ({ ...segment, lane: "full" as const }));
   return [...ways, ...core];
-}
-
-export interface PlanMarkers {
-  /** Indices of the connections with the shortest door-to-door time. */
-  fastest: Set<number>;
-  /** Indices of the connections with the fewest transfers (only when the counts differ). */
-  fewestTransfers: Set<number>;
-}
-
-/** Comparison markers; nothing is marked when there is only one connection or all are equal. */
-export function planMarkers(suggestions: CommuteSuggestion[], mode: TravelMode): PlanMarkers {
-  const markers: PlanMarkers = { fastest: new Set(), fewestTransfers: new Set() };
-  if (suggestions.length < 2) return markers;
-
-  const durations = suggestions.map((suggestion) => doorToDoorMinutes(suggestion, mode));
-  const minDuration = Math.min(...durations);
-  if (Math.max(...durations) > minDuration) {
-    durations.forEach((duration, index) => duration === minDuration && markers.fastest.add(index));
-  }
-
-  const counts = suggestions.map(transferCount);
-  const minCount = Math.min(...counts);
-  if (Math.max(...counts) > minCount) {
-    counts.forEach((count, index) => count === minCount && markers.fewestTransfers.add(index));
-  }
-  return markers;
 }
 
 /** Fewest and most connections the planner requests (the backend allows up to 12 per request). */
