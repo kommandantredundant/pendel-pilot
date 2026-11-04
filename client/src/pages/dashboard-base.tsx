@@ -1,8 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { Settings as SettingsIcon, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useJourneysWithRefresh } from "@/hooks/use-transport";
+import { JOURNEY_RESULTS, useJourneysWithRefresh } from "@/hooks/use-transport";
+import { useNowRefill } from "@/hooks/use-now-refill";
+import { countedModes, type ModePreference } from "@/lib/glance";
+import { reachableBy, selectNowRows } from "@/lib/plan";
 import { useSettings as useUserConfig } from "@/hooks/use-settings";
 import { JourneyCard } from "@/components/journey-card";
 import { ErrorDisplay } from "@/components/error-display";
@@ -20,6 +23,16 @@ interface DashboardBaseProps {
   destination: "work" | "home";
 }
 
+/** Re-render every 30 s so connections that fall out of reach leave the "now" list. */
+function useNow(intervalMs = 30_000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
 export function DashboardBase({ destination }: DashboardBaseProps) {
   const [timePlanning, setTimePlanning] = useState<"now" | "later">("now");
   const [arrivalDeparture, setArrivalDeparture] = useState<"arrival" | "departure">("arrival");
@@ -35,6 +48,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
   const {
     data: journeys,
     isLoading: isLoadingJourneys,
+    isFetching,
     isError,
     error,
     refresh,
@@ -45,6 +59,26 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
     arrivalDeparture,
     selectedTime || "00:00"
   );
+
+  // "Now" shows only what can still be made with the usual way to the station (both when spontaneous),
+  // plus the one most recently missed; a chosen time shows the timetable as it is.
+  const now = useNow();
+  const preference: ModePreference =
+    (destination === "work" ? settings?.stationModeFromHome : settings?.stationModeFromWork) ?? "both";
+  const modes = countedModes(preference);
+  const shown = useMemo(
+    () => (journeys && timePlanning === "now" ? selectNowRows(journeys, modes, now, JOURNEY_RESULTS) : journeys),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [journeys, timePlanning, preference, now]
+  );
+  useNowRefill({
+    active: timePlanning === "now",
+    hasData: !!journeys,
+    isFetching,
+    reachable: (shown ?? []).filter((suggestion) => reachableBy(suggestion, modes, now)).length,
+    target: JOURNEY_RESULTS,
+    refresh,
+  });
 
   // Cleanup on unmount
   useEffect(() => {
@@ -207,7 +241,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
             >
               {[1, 2, 3].map(i => <Skeleton key={i} className="h-36 w-full rounded-xl bg-card border border-border/70" />)}
             </motion.div>
-          ) : journeys?.length === 0 ? (
+          ) : shown?.length === 0 ? (
             <motion.div 
               key="empty"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -225,7 +259,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
               key="list"
               className="space-y-3"
             >
-              {journeys?.map((journey: any, index: number) => (
+              {shown?.map((journey: any, index: number) => (
                 <JourneyCard
                   key={index}
                   journey={journey}
