@@ -26,8 +26,8 @@ export function Layout({ children }: LayoutProps) {
   const view = useActiveView();
   // Planner needs the width for its timeline; the settings page keeps the narrow column.
   const wide = view === "plan" && location !== "/settings";
-  // 1536 px: on a 13" laptop (1440 px) Planner uses the full width, larger screens keep it readable.
-  const width = wide ? "max-w-screen-2xl" : "max-w-4xl";
+  // Planner grows with the screen: a wider timeline instead of empty margins on large displays.
+  const width = wide ? "max-w-none" : "max-w-4xl";
   const ThemeIcon = preference === "light" ? Sun : preference === "dark" ? Moon : Monitor;
 
   return (
@@ -39,7 +39,7 @@ export function Layout({ children }: LayoutProps) {
             <TrainIcon className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">
               {t('app.title', language)}
-              {view !== "classic" && (
+              {(view === "glance" || view === "plan") && (
                 <span className="ml-1.5 font-mono-numbers text-[0.8em] font-medium uppercase tracking-wide text-primary">
                   {view === "glance" ? "Glance" : "Planner"}
                 </span>

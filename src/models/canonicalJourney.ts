@@ -96,13 +96,13 @@ export interface CalculateJourneyRequest {
   departureTime?: string;
   arrivalTime?: string;
   buffers?: InputBuffers;
-  /** Number of connection options to return (1–6, default 1). */
+  /** Number of connection options to return (1–12, default 1). */
   results?: number;
   /** Skip long-distance trains (ICE/IC/EC) when searching connections. */
   excludeLongDistance?: boolean;
 }
 
-export const MAX_JOURNEY_RESULTS = 6;
+export const MAX_JOURNEY_RESULTS = 12;
 
 export interface ValidationErrorDetail {
   field: string;

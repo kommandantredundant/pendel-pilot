@@ -114,7 +114,7 @@ describe('journey options', () => {
     assert.equal(validateCalculateJourneyRequest({ ...baseRequest, arrivalTime: '2026-04-10T08:30:00+02:00' }).success, true);
     assert.equal(validateCalculateJourneyRequest({ ...baseRequest, departureTime: '2026-04-10T07:30:00+02:00' }).success, true);
     assert.equal(validateCalculateJourneyRequest(baseRequest).success, false);
-    assert.equal(validateCalculateJourneyRequest({ ...baseRequest, departureTime: '2026-04-10T07:30:00+02:00', results: 9 }).success, false);
+    assert.equal(validateCalculateJourneyRequest({ ...baseRequest, departureTime: '2026-04-10T07:30:00+02:00', results: 13 }).success, false);
     assert.equal(
       validateCalculateJourneyRequest({ ...baseRequest, departureTime: '2026-04-10T07:30:00+02:00', workStationLocation: { latitude: 99, longitude: 0 } }).success,
       false

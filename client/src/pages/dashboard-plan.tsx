@@ -29,6 +29,7 @@ import {
   planMarkers,
   PLAN_TIME_ZONE,
   sortByLeaveTime,
+  planRowCount,
   timeAxis,
   timelineModes,
   transferCount,
@@ -51,6 +52,17 @@ const ModeIcon = ({ mode, className }: { mode: TravelMode; className?: string })
   mode === "walk" ? <Footprints className={className} aria-hidden /> : <Bike className={className} aria-hidden />;
 
 const TRANSFER_TEXT: Record<TransferStatus, string> = { ok: "text-muted-foreground", tight: "text-soon", risk: "text-late" };
+
+/** Connections that fit the window height; only changes when a whole row more or less fits. */
+function usePlanRows(): number {
+  const [rows, setRows] = useState(() => planRowCount(window.innerHeight));
+  useEffect(() => {
+    const onResize = () => setRows(planRowCount(window.innerHeight));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return rows;
+}
 
 function useNow(intervalMs = 30_000): number {
   const [now, setNow] = useState(() => Date.now());
@@ -119,7 +131,8 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
   }, [date, time, kind, today]);
   const anchor = page ?? barAnchor;
 
-  const { data: journeys, isLoading, isFetching, isError, error, refresh } = usePlanJourneys(destination, anchor, !includeLongDistance);
+  const rows = usePlanRows();
+  const { data: journeys, isLoading, isFetching, isError, error, refresh } = usePlanJourneys(destination, anchor, !includeLongDistance, rows);
 
   const sorted = useMemo(() => (journeys ? sortByLeaveTime(journeys, lead) : []), [journeys, lead]);
   const axis = useMemo(() => timeAxis(sorted, mode), [sorted, mode]);
@@ -442,16 +455,19 @@ function Shortcut({ keys, label }: { keys: string[]; label: string }) {
 
 function AxisLabels({ axis }: { axis: TimeAxis }) {
   return (
-    <div className="relative h-4" aria-hidden>
-      {/* The outer ticks only pad the axis to round times; labelling them would crowd the edges. */}
-      {axis.ticks.slice(1, -1).map((tick) => (
-        <span
-          key={tick}
-          className="absolute top-0 -translate-x-1/2 font-mono-numbers normal-case tracking-normal"
-          style={{ left: `${axisPercent(axis, tick)}%` }}
-        >
-          {hhmm(tick)}
-        </span>
+    <div className="relative h-5" aria-hidden>
+      {axis.ticks.map((tick) => {
+        const left = axisPercent(axis, tick);
+        // Labels at the very edges align inwards instead of being cut off.
+        const align = left < 3 ? "" : left > 97 ? "-translate-x-full" : "-translate-x-1/2";
+        return (
+          <span key={tick} className={cn("absolute top-0 font-mono-numbers normal-case tracking-normal", align)} style={{ left: `${left}%` }}>
+            {hhmm(tick)}
+          </span>
+        );
+      })}
+      {axis.minorTicks.map((tick) => (
+        <span key={tick} className="absolute bottom-0 h-1.5 w-px bg-muted-foreground/40" style={{ left: `${axisPercent(axis, tick)}%` }} />
       ))}
     </div>
   );
@@ -654,7 +670,10 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
       {/* Margins hold the labels: departure times above each train, transfer minutes below. */}
       <div className={cn("relative mt-4 mb-4", split ? "h-9" : "h-7")}>
         {axis.ticks.map((tick) => (
-          <span key={tick} className="absolute inset-y-0 w-px bg-border/70" style={{ left: `${axisPercent(axis, tick)}%` }} />
+          <span key={tick} className="absolute inset-y-0 w-px bg-border" style={{ left: `${axisPercent(axis, tick)}%` }} />
+        ))}
+        {axis.minorTicks.map((tick) => (
+          <span key={tick} className="absolute inset-y-2 w-px bg-border/50" style={{ left: `${axisPercent(axis, tick)}%` }} />
         ))}
         {segments.map((segment, index) => {
           const left = axisPercent(axis, segment.start);
