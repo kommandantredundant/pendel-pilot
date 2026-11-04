@@ -5,6 +5,7 @@ import { DashboardPlan } from "./dashboard-plan";
 
 export function WorkDashboard() {
   const view = useActiveView();
+  if (view === "loading") return null;
   if (view === "plan") return <DashboardPlan destination="work" />;
   return view === "glance" ? <DashboardGlance destination="work" /> : <DashboardBase destination="work" />;
 }

@@ -2,6 +2,15 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## 0.1.3
+
+- **Planner on large screens:** Planner now uses the full window width instead of stopping at 1536 px, so the timeline grows with the display. Taller windows show more connections: 6 on a 13" laptop, up to 12 on large screens.
+- **Finer time axis:** small marks every 10 minutes between the labelled half hours.
+- **Calmer rows:** the "Fastest" and "Fewest" badges are gone; duration and transfers stand on their own, and the narrower transfers column leaves more room for the timeline.
+- **Short ways stay readable:** when the way to or from the station is too short for its icon, the icon sits just outside the bar (before the way to the station, after the way from it) in a colour readable on the row background, instead of being cut off.
+- **Walk above bike:** with both modes shown, the walk lane sits above the bike lane, and leave, arrive and duration list walking first, since you leave earlier on foot.
+- **One request less on load:** the dashboards wait for the saved settings before choosing a view, so opening Planner or Glance no longer fires a request for the classic view first.
+
 ## 0.1.2
 
 - **Saving with address lookup problems:** if the address lookup (Photon) fails or times out, the app now retries once and looks up home and work one after the other instead of at the same time. If it still fails, the message explains what went wrong in plain language and names the technical cause (for example "photon responded with HTTP 403."), instead of showing "geocoding-network".

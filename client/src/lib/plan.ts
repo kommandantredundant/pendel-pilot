@@ -3,8 +3,7 @@ import { arriveTime, leaveTime, type ModePreference, type TravelMode } from "./g
 import type { JourneyAnchor } from "@/hooks/use-transport";
 
 /**
- * Pure helpers for the desktop planning view ("Planner"): door-to-door timeline segments, comparison
- * markers, transfer warnings, the shared time axis, and Europe/Berlin date handling for the planning bar.
+ * Pure helpers for the desktop planning view ("Planner"): door-to-door timeline segments, transfer warnings, the shared time axis, and Europe/Berlin date handling for the planning bar.
  */
 
 export const PLAN_TIME_ZONE = "Europe/Berlin";
@@ -38,12 +37,12 @@ export function defaultTimelineMode(preference: ModePreference): TimelineMode {
   return preference;
 }
 
-/** Modes shown in the timeline, bike first (top lane). */
+/** Modes shown in the timeline, walk first (top lane): it leaves earlier, so the lanes read as a staircase. */
 export function timelineModes(mode: TimelineMode): TravelMode[] {
-  return mode === "both" ? ["bike", "walk"] : [mode];
+  return mode === "both" ? ["walk", "bike"] : [mode];
 }
 
-/** Mode used for sorting, markers and dimming; with both lanes the faster bike leads. */
+/** Mode used for sorting and dimming; with both lanes the faster bike leads. */
 export function leadMode(mode: TimelineMode): TravelMode {
   return mode === "both" ? "bike" : mode;
 }
@@ -133,7 +132,7 @@ export type LanedSegment = TimelineSegment & { lane: Lane };
 
 /**
  * Segments for the bar. With one mode every segment fills the bar; with both, trains and transfers stay
- * full height while the way to and from the station splits horizontally: bike on top, walk below, each
+ * full height while the way to and from the station splits horizontally: walk on top, bike below, each
  * with its own length.
  */
 export function lanedSegments(suggestion: CommuteSuggestion, mode: TimelineMode): LanedSegment[] {
@@ -150,30 +149,18 @@ export function lanedSegments(suggestion: CommuteSuggestion, mode: TimelineMode)
   return [...ways, ...core];
 }
 
-export interface PlanMarkers {
-  /** Indices of the connections with the shortest door-to-door time. */
-  fastest: Set<number>;
-  /** Indices of the connections with the fewest transfers (only when the counts differ). */
-  fewestTransfers: Set<number>;
-}
+/** Fewest and most connections the planner requests (the backend allows up to 12 per request). */
+export const PLAN_MIN_ROWS = 6;
+export const PLAN_MAX_ROWS = 12;
+/** Height taken by title bar, planning bar, column header, paging row and bottom navigation. */
+const PLAN_CHROME_PX = 470;
+/** Approximate height of one connection row. */
+const PLAN_ROW_PX = 100;
 
-/** Comparison markers; nothing is marked when there is only one connection or all are equal. */
-export function planMarkers(suggestions: CommuteSuggestion[], mode: TravelMode): PlanMarkers {
-  const markers: PlanMarkers = { fastest: new Set(), fewestTransfers: new Set() };
-  if (suggestions.length < 2) return markers;
-
-  const durations = suggestions.map((suggestion) => doorToDoorMinutes(suggestion, mode));
-  const minDuration = Math.min(...durations);
-  if (Math.max(...durations) > minDuration) {
-    durations.forEach((duration, index) => duration === minDuration && markers.fastest.add(index));
-  }
-
-  const counts = suggestions.map(transferCount);
-  const minCount = Math.min(...counts);
-  if (Math.max(...counts) > minCount) {
-    counts.forEach((count, index) => count === minCount && markers.fewestTransfers.add(index));
-  }
-  return markers;
+/** How many connections fit the window height, so taller screens show more of the timetable. */
+export function planRowCount(viewportHeight: number): number {
+  const fitting = Math.floor((viewportHeight - PLAN_CHROME_PX) / PLAN_ROW_PX);
+  return Math.min(PLAN_MAX_ROWS, Math.max(PLAN_MIN_ROWS, fitting));
 }
 
 /** Connections in the order you would leave, so the timeline reads top to bottom. */
@@ -184,25 +171,31 @@ export function sortByLeaveTime(suggestions: CommuteSuggestion[], mode: TravelMo
 export interface TimeAxis {
   start: number;
   end: number;
-  /** Tick instants (ms) inside the axis. */
+  /** Labelled tick instants (ms): every 30 min, or every hour on long spans. */
   ticks: number[];
+  /** Small unlabelled ticks in between: every 10 min, or every 30 on long spans. */
+  minorTicks: number[];
 }
 
 const MINUTE = 60_000;
+/** Spans up to this long get 30-minute labels and 10-minute minor ticks. */
+const FINE_AXIS_MAX_MINUTES = 360;
 
-/** Shared time axis over all rows, padded to whole tick steps so labels land on round times. */
+/** Shared time axis over all rows, padded only to the next minor tick so the timeline keeps its width. */
 export function timeAxis(suggestions: CommuteSuggestion[], mode: TimelineMode): TimeAxis | null {
   const segments = suggestions.flatMap((suggestion) => lanedSegments(suggestion, mode));
   if (segments.length === 0) return null;
   const min = Math.min(...segments.map((segment) => segment.start));
   const max = Math.max(...segments.map((segment) => segment.end));
-  const spanMinutes = (max - min) / MINUTE;
-  const step = (spanMinutes <= 150 ? 15 : spanMinutes <= 300 ? 30 : 60) * MINUTE;
-  const start = Math.floor(min / step) * step;
-  const end = Math.max(start + step, Math.ceil(max / step) * step);
+  const fine = (max - min) / MINUTE <= FINE_AXIS_MAX_MINUTES;
+  const major = (fine ? 30 : 60) * MINUTE;
+  const minor = (fine ? 10 : 30) * MINUTE;
+  const start = Math.floor(min / minor) * minor;
+  const end = Math.max(start + minor, Math.ceil(max / minor) * minor);
   const ticks: number[] = [];
-  for (let tick = start; tick <= end; tick += step) ticks.push(tick);
-  return { start, end, ticks };
+  const minorTicks: number[] = [];
+  for (let tick = start; tick <= end; tick += minor) (tick % major === 0 ? ticks : minorTicks).push(tick);
+  return { start, end, ticks, minorTicks };
 }
 
 /** Position of an instant on the axis in percent (clamped). */

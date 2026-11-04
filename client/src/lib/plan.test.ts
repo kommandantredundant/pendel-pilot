@@ -8,10 +8,11 @@ import {
   berlinDate,
   berlinIso,
   doorToDoorMinutes,
+  transferCount,
   earlierAnchor,
   lanedSegments,
+  planRowCount,
   laterAnchor,
-  planMarkers,
   sortByLeaveTime,
   timeAxis,
   timelineSegments,
@@ -99,35 +100,29 @@ test("legs without arrival times collapse into one ride block", () => {
   assert.deepEqual(transfers(s), []);
 });
 
-test("markers flag the fastest connection and the fewest transfers only when they differ", () => {
-  const direct = suggestion(0, [[10, 60]]); // 65 min door to door
-  const fast = suggestion(20, [[28, 50], [54, 70]]); // 55 min, one transfer
-  const markers = planMarkers([direct, fast], "bike");
-  assert.deepEqual([...markers.fastest], [1]);
-  assert.deepEqual([...markers.fewestTransfers], [0]);
-  assert.equal(doorToDoorMinutes(fast, "bike"), 55);
-
-  const same = planMarkers([direct, suggestion(30, [[40, 90]])], "bike");
-  assert.equal(same.fastest.size, 0);
-  assert.equal(same.fewestTransfers.size, 0);
-  assert.equal(planMarkers([direct], "bike").fastest.size, 0);
-});
-
 test("connections sort by leave time for the chosen mode", () => {
   const a = suggestion(30, [[40, 60]]);
   const b = suggestion(5, [[15, 50]]);
   assert.deepEqual(sortByLeaveTime([a, b], "bike"), [b, a]);
 });
 
-test("time axis pads to round ticks and maps instants to percent", () => {
+test("time axis pads to the next 10 minutes, labels every 30 and marks the 10s in between", () => {
   const axis = timeAxis([suggestion(7, [[17, 50]]), suggestion(25, [[35, 80]])], "bike");
   assert.ok(axis);
   assert.equal(axis.start, BASE); // 05:07 rounds down to 05:00
   assert.equal(axis.end, BASE + 90 * 60_000); // 06:25 rounds up to 06:30
-  assert.equal(axis.ticks.length, 7); // every 15 min
+  assert.deepEqual(axis.ticks.map((tick) => (tick - BASE) / 60_000), [0, 30, 60, 90]);
+  assert.deepEqual(axis.minorTicks.map((tick) => (tick - BASE) / 60_000), [10, 20, 40, 50, 70, 80]);
   assert.equal(axisPercent(axis, BASE + 45 * 60_000), 50);
   assert.equal(axisPercent(axis, BASE - 60 * 60_000), 0);
   assert.equal(timeAxis([], "bike"), null);
+});
+
+test("long spans switch to hourly labels with 30-minute minor ticks", () => {
+  const axis = timeAxis([suggestion(0, [[10, 400]])], "bike");
+  assert.ok(axis);
+  assert.ok(axis.ticks.every((tick) => (tick - BASE) % (60 * 60_000) === 0));
+  assert.ok(axis.minorTicks.every((tick) => (tick - BASE) % (30 * 60_000) === 0));
 });
 
 test("paging anchors: later departs after the last train, earlier arrives before the first one", () => {
@@ -146,7 +141,7 @@ test("Berlin date helpers convert wall-clock time across daylight saving changes
   assert.equal(addDays("2026-12-31", 1), "2027-01-01");
 });
 
-test("with both modes the way segments split into a bike lane on top and a walk lane below", () => {
+test("with both modes the way segments split into a walk lane on top and a bike lane below", () => {
   const segments = lanedSegments(suggestion(0, [[10, 30]]), "both");
   const summary = segments.map((segment) => [
     segment.kind,
@@ -156,10 +151,10 @@ test("with both modes the way segments split into a bike lane on top and a walk 
     (segment.end - BASE) / 60_000,
   ]);
   assert.deepEqual(summary, [
-    ["access", "top", "bike", 0, 10],
-    ["egress", "top", "bike", 30, 35],
-    ["access", "bottom", "walk", -10, 10],
-    ["egress", "bottom", "walk", 30, 42],
+    ["access", "top", "walk", -10, 10],
+    ["egress", "top", "walk", 30, 42],
+    ["access", "bottom", "bike", 0, 10],
+    ["egress", "bottom", "bike", 30, 35],
     ["ride", "full", "-", 10, 30],
   ]);
   assert.ok(lanedSegments(suggestion(0, [[10, 30]]), "bike").every((segment) => segment.lane === "full"));
@@ -168,5 +163,20 @@ test("with both modes the way segments split into a bike lane on top and a walk 
 test("the time axis covers the longer walk lane when both modes are shown", () => {
   const list = [suggestion(7, [[17, 50]])]; // walk leaves at 17 - 20 = minute -3
   assert.equal(timeAxis(list, "bike")?.start, BASE);
-  assert.equal(timeAxis(list, "both")?.start, BASE - 15 * 60_000);
+  assert.equal(timeAxis(list, "both")?.start, BASE - 10 * 60_000);
+});
+
+test("the planner shows 6 connections on short screens and up to 12 on tall ones", () => {
+  assert.equal(planRowCount(800), 6); // 13" laptop
+  assert.equal(planRowCount(1300), 8); // 1440p desktop
+  assert.equal(planRowCount(1600), 11);
+  assert.equal(planRowCount(2400), 12); // 4K, capped
+});
+
+test("door-to-door time runs from leaving home to arriving, per mode; transfers count the changes", () => {
+  const s = suggestion(20, [[28, 50], [54, 70]]);
+  assert.equal(doorToDoorMinutes(s, "bike"), 55); // leave 20, arrive 70 + 5
+  assert.equal(doorToDoorMinutes(s, "walk"), 74); // leave 28 - 20, arrive 70 + 12
+  assert.equal(transferCount(s), 1);
+  assert.equal(transferCount(suggestion(0, [[10, 60]])), 0);
 });

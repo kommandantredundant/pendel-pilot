@@ -295,17 +295,19 @@ export function useJourneysWithRefresh(
   };
 }
 
-/** Most options the backend returns per request; the planning view shows as many as it can. */
-const PLAN_RESULTS = 6;
-
 /**
  * Journeys for the desktop planning view: explicit time anchor (paging moves it) and long-distance filter,
  * keeping the previous list on screen while the next page loads.
  */
-export function usePlanJourneys(destination: "work" | "home", anchor: JourneyAnchor, excludeLongDistance: boolean) {
+export function usePlanJourneys(
+  destination: "work" | "home",
+  anchor: JourneyAnchor,
+  excludeLongDistance: boolean,
+  results: number
+) {
   const query = useQuery({
-    queryKey: ["transport", "plan", destination, anchor, excludeLongDistance],
-    queryFn: () => fetchJourneysAt(destination, anchor, { results: PLAN_RESULTS, excludeLongDistance }),
+    queryKey: ["transport", "plan", destination, anchor, excludeLongDistance, results],
+    queryFn: () => fetchJourneysAt(destination, anchor, { results, excludeLongDistance }),
     placeholderData: keepPreviousData,
     refetchInterval: 300000,
     refetchIntervalInBackground: false,
