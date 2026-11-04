@@ -526,7 +526,7 @@ function AxisLabels({ axis }: { axis: TimeAxis }) {
         );
       })}
       {axis.minorTicks.map((tick) => (
-        <span key={tick} className="absolute bottom-0 h-1.5 w-px bg-muted-foreground/40" style={{ left: `${axisPercent(axis, tick)}%` }} />
+        <span key={tick} className="absolute bottom-0 h-2 w-px bg-muted-foreground/60" style={{ left: `${axisPercent(axis, tick)}%` }} />
       ))}
     </div>
   );
@@ -734,10 +734,10 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
       {/* Margins hold the labels: departure times above each train, transfer minutes below. */}
       <div ref={barRef} className={cn("relative mt-4 mb-4", split ? "h-9" : "h-7")}>
         {axis.ticks.map((tick) => (
-          <span key={tick} className="absolute inset-y-0 w-px bg-border" style={{ left: `${axisPercent(axis, tick)}%` }} />
+          <span key={tick} className="absolute inset-y-0 w-px bg-muted-foreground/35" style={{ left: `${axisPercent(axis, tick)}%` }} />
         ))}
         {axis.minorTicks.map((tick) => (
-          <span key={tick} className="absolute inset-y-2 w-px bg-border/50" style={{ left: `${axisPercent(axis, tick)}%` }} />
+          <span key={tick} className="absolute inset-y-1 w-px bg-muted-foreground/20" style={{ left: `${axisPercent(axis, tick)}%` }} />
         ))}
         {segments.map((segment, index) => {
           const left = axisPercent(axis, segment.start);
