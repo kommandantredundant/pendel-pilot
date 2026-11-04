@@ -10,10 +10,13 @@ import {
   doorToDoorMinutes,
   transferCount,
   earlierAnchor,
+  connectionKey,
+  fittingRowCount,
   lanedSegments,
   mergeSuggestions,
   reachableBy,
   selectNowRows,
+  uniqueConnections,
   planRowCount,
   laterAnchor,
   sortByLeaveTime,
@@ -204,4 +207,38 @@ test("result pages merge without repeating a connection", () => {
   const b = suggestion(20, [[30, 60]]);
   const c = suggestion(40, [[50, 80]]);
   assert.deepEqual(mergeSuggestions([a, b], [b, c]), [a, b, c]);
+});
+
+test("connections sharing their first train get different keys", () => {
+  const fast = suggestion(0, [[10, 30], [33, 50]]);
+  const slow = suggestion(0, [[10, 30], [40, 70]]);
+  assert.notEqual(connectionKey(fast), connectionKey(slow));
+  assert.equal(connectionKey(fast), connectionKey(suggestion(0, [[10, 30], [33, 50]])));
+});
+
+test("alternatives sharing the first train all stay; same departure sorts by earlier arrival", () => {
+  // RE1 -> ICE arrives earlier than RE1 -> RB on the same first train: both are listed, the faster first.
+  const viaRegional = suggestion(0, [[10, 30], [40, 70]]);
+  const viaLongDistance = suggestion(0, [[10, 30], [33, 50]]);
+  const later = suggestion(20, [[30, 60]]);
+  assert.deepEqual(uniqueConnections([viaRegional, viaLongDistance, later]), [viaRegional, viaLongDistance, later]);
+  assert.deepEqual(sortByLeaveTime([viaRegional, later, viaLongDistance], "bike"), [viaLongDistance, viaRegional, later]);
+  // Exact duplicates are shown once.
+  assert.deepEqual(uniqueConnections([later, suggestion(20, [[30, 60]])]), [later]);
+});
+
+test("'now' keeps the missed connection on top even when ordering by another mode", () => {
+  const now = BASE + 30 * 60_000;
+  const missed = suggestion(10, [[20, 50]]);
+  const a = suggestion(40, [[48, 70]]);
+  const b = suggestion(35, [[50, 80]]);
+  assert.deepEqual(selectNowRows([a, b, missed], ["bike"], now, 3, "bike"), [missed, b, a]);
+});
+
+test("the fitting row count follows the measured space and row height", () => {
+  assert.equal(fittingRowCount(700, 100), 7);
+  assert.equal(fittingRowCount(699, 100), 6);
+  assert.equal(fittingRowCount(150, 100), 1); // small windows: fewer rows rather than scrolling
+  assert.equal(fittingRowCount(40, 100), 1);
+  assert.equal(fittingRowCount(5000, 100), 12); // never more than one request loads
 });

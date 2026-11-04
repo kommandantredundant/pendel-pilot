@@ -49,7 +49,7 @@ export function Layout({ children }: LayoutProps) {
           <button
             type="button"
             onClick={cycle}
-            className="ml-auto w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className={cn("ml-auto w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors")}
             aria-label={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
             title={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
           >
@@ -59,7 +59,8 @@ export function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* Main Content Area */}
-      <main className={cn("flex-1 p-4 md:p-8 pb-24 md:pb-32 w-full mx-auto", width)}>
+      {/* Planner fits the screen above the bottom navigation, so it needs less padding on top. */}
+      <main className={cn("flex-1 w-full mx-auto", wide ? "px-8 pt-5 pb-32" : "p-4 md:p-8 pb-24 md:pb-32", width)}>
         <ErrorBoundary>
           <motion.div
             key={location}
@@ -72,8 +73,22 @@ export function Layout({ children }: LayoutProps) {
             {children}
           </motion.div>
         </ErrorBoundary>
-        {/* Required by the Transitous usage policy: visible link to its data sources. */}
-        <p className="mt-8 text-center text-xs text-muted-foreground">
+        {/* Required by the Transitous usage policy: visible link to its data sources.
+            Planner fits the screen and shows the same links in its own bottom line. */}
+        {!wide && <DataSources className="mt-8 text-center" />}
+      </main>
+
+      {/* Bottom Navigation */}
+      <BottomNav />
+    </div>
+  );
+}
+
+/** Data source links required by the Transitous usage policy (plus OpenStreetMap attribution). */
+export function DataSources({ className }: { className?: string }) {
+  const { language } = useLanguage();
+  return (
+        <p className={cn("text-xs text-muted-foreground", className)}>
           {t('footer.data', language)}{" "}
           <a href="https://transitous.org/sources/" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
             {t('footer.sources', language)}
@@ -83,10 +98,5 @@ export function Layout({ children }: LayoutProps) {
             © OpenStreetMap
           </a>
         </p>
-      </main>
-
-      {/* Bottom Navigation */}
-      <BottomNav />
-    </div>
   );
 }

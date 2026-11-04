@@ -157,7 +157,12 @@ const PLAN_CHROME_PX = 470;
 /** Approximate height of one connection row. */
 const PLAN_ROW_PX = 100;
 
-/** How many connections fit the window height, so taller screens show more of the timetable. */
+/** Rows that fit into `availablePx` at `rowPx` each: at least one, at most what one request loads. */
+export function fittingRowCount(availablePx: number, rowPx: number): number {
+  return Math.min(PLAN_MAX_ROWS, Math.max(1, Math.floor(availablePx / rowPx)));
+}
+
+/** First estimate before the rows can be measured: how many connections fit the window height. */
 export function planRowCount(viewportHeight: number): number {
   const fitting = Math.floor((viewportHeight - PLAN_CHROME_PX) / PLAN_ROW_PX);
   return Math.min(PLAN_MAX_ROWS, Math.max(PLAN_MIN_ROWS, fitting));
@@ -172,25 +177,62 @@ export function reachableBy(suggestion: CommuteSuggestion, modes: TravelMode[], 
  * "Now" is about leaving, not about the train: keep the connections still reachable with one of the modes,
  * and above them at most the one most recently missed, as orientation. Fits `rows` in total.
  */
-export function selectNowRows(suggestions: CommuteSuggestion[], modes: TravelMode[], now: number, rows: number): CommuteSuggestion[] {
-  const byDeparture = [...suggestions].sort((a, b) => ms(a.journey.departure) - ms(b.journey.departure));
+export function selectNowRows(
+  suggestions: CommuteSuggestion[],
+  modes: TravelMode[],
+  now: number,
+  rows: number,
+  /** Order of the reachable rows; the missed one always stays on top. Defaults to train departure. */
+  orderBy?: TravelMode
+): CommuteSuggestion[] {
+  const byDeparture = [...suggestions].sort(
+    (a, b) => ms(a.journey.departure) - ms(b.journey.departure) || byArrivalThenTransfers(a, b)
+  );
   const missed = byDeparture.filter((suggestion) => !reachableBy(suggestion, modes, now));
-  const reachable = byDeparture.filter((suggestion) => reachableBy(suggestion, modes, now));
+  let reachable = byDeparture.filter((suggestion) => reachableBy(suggestion, modes, now));
   const lastMissed = missed.at(-1);
-  return lastMissed ? [lastMissed, ...reachable.slice(0, rows - 1)] : reachable.slice(0, rows);
+  reachable = reachable.slice(0, lastMissed ? rows - 1 : rows);
+  if (orderBy) reachable = sortByLeaveTime(reachable, orderBy);
+  return lastMissed ? [lastMissed, ...reachable] : reachable;
+}
+
+/**
+ * Identity of a connection: every train with its departure, plus the arrival. Several connections often
+ * share their first train and only differ afterwards, so the first train alone is not enough.
+ */
+export function connectionKey(suggestion: CommuteSuggestion): string {
+  const legs = suggestion.journey.legs.map((leg) => `${leg.lineName}@${leg.departure}`).join(">");
+  return `${legs}|${suggestion.journey.arrival}`;
 }
 
 /** Two result pages joined without the connections they share. */
 export function mergeSuggestions(first: CommuteSuggestion[], second: CommuteSuggestion[]): CommuteSuggestion[] {
-  const key = (suggestion: CommuteSuggestion) =>
-    `${suggestion.journey.departure}|${suggestion.journey.legs.map((leg) => leg.lineName).join(">")}`;
-  const seen = new Set(first.map(key));
-  return [...first, ...second.filter((suggestion) => !seen.has(key(suggestion)))];
+  const seen = new Set(first.map(connectionKey));
+  return [...first, ...second.filter((suggestion) => !seen.has(connectionKey(suggestion)))];
+}
+
+/** The same connection listed twice (exact duplicate) is shown once; alternatives all stay. */
+export function uniqueConnections(suggestions: CommuteSuggestion[]): CommuteSuggestion[] {
+  const seen = new Set<string>();
+  return suggestions.filter((suggestion) => {
+    const key = connectionKey(suggestion);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Tie-break for connections that leave at the same time (typically the same first train): the one that
+ * arrives earlier comes first, then the one with fewer transfers.
+ */
+function byArrivalThenTransfers(a: CommuteSuggestion, b: CommuteSuggestion): number {
+  return ms(a.journey.arrival) - ms(b.journey.arrival) || transferCount(a) - transferCount(b);
 }
 
 /** Connections in the order you would leave, so the timeline reads top to bottom. */
 export function sortByLeaveTime(suggestions: CommuteSuggestion[], mode: TravelMode): CommuteSuggestion[] {
-  return [...suggestions].sort((a, b) => ms(leaveTime(a, mode)) - ms(leaveTime(b, mode)));
+  return [...suggestions].sort((a, b) => ms(leaveTime(a, mode)) - ms(leaveTime(b, mode)) || byArrivalThenTransfers(a, b));
 }
 
 export interface TimeAxis {

@@ -2,6 +2,16 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## 0.1.5
+
+- **Planner fits the screen:** Planner shows exactly as many connections as fit without scrolling, measured on the actual page. Paging, legend, keyboard shortcuts and the data source links always stay visible at the bottom; use Earlier/Later to see more.
+- **More room on desktop:** Planner's header is a single line and the rows are more compact, so more connections fit above the bottom navigation.
+- **Fixed jumbled timelines:** when several connections shared their first train, rows could show stale timelines at the wrong position. Each connection now has its own identity.
+- **Alternatives sorted sensibly:** connections that start with the same train (for example RE1 → ICE 108 and RE1 → RB89) are all listed; the one that arrives earlier comes first. Exact duplicates are shown once.
+- **Clearer grid:** the half-hour lines and the 10-minute lines in the timeline are drawn darker, so they stay visible on white and in dark mode.
+- **Continuous "now" line:** the red line for the current time runs through the whole timeline, from the time axis down to the last row, instead of one short mark per row.
+- **Missed connection stays on top:** the one just-missed connection in "Now" always comes first.
+
 ## 0.1.4
 
 - **"Now" means leaving now:** Planner's "Now" view lists the connections you can still make on foot or by bike, including those that need you to hurry, and above them at most the one you just missed. Trains you would have had to leave for already no longer fill the list.

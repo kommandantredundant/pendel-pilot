@@ -93,6 +93,7 @@ export function BottomNav() {
       `}
       role="navigation"
       aria-label="Main navigation"
+      data-bottom-nav
     >
       <div className="flex items-center justify-around px-2 py-2 md:py-3">
         {navItems.map((item) => {
@@ -141,3 +142,4 @@ export function BottomNav() {
     </nav>
   );
 }
+

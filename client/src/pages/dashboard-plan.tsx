@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, Bike, Check, ChevronLeft, ChevronRight, Footprints, RefreshCw } from "lucide-react";
@@ -7,7 +7,7 @@ import { usePlanJourneys, type JourneyAnchor } from "@/hooks/use-transport";
 import { useNowRefill } from "@/hooks/use-now-refill";
 import { useSettings } from "@/hooks/use-settings";
 import { ErrorDisplay } from "@/components/error-display";
-import { cn } from "@/components/layout";
+import { cn, DataSources } from "@/components/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/lib/language-context";
@@ -29,7 +29,10 @@ import {
   leadMode,
   PLAN_TIME_ZONE,
   sortByLeaveTime,
+  connectionKey,
+  fittingRowCount,
   planRowCount,
+  PLAN_MAX_ROWS,
   reachableBy,
   selectNowRows,
   timeAxis,
@@ -55,14 +58,42 @@ const ModeIcon = ({ mode, className }: { mode: TravelMode; className?: string })
 
 const TRANSFER_TEXT: Record<TransferStatus, string> = { ok: "text-muted-foreground", tight: "text-soon", risk: "text-late" };
 
-/** Connections that fit the window height; only changes when a whole row more or less fits. */
-function usePlanRows(): number {
+/** Space kept free above the floating bottom navigation (px). */
+const BOTTOM_NAV_GAP_PX = 12;
+/** Space kept free at the bottom of the window when there is no bottom navigation (px). */
+const BOTTOM_EDGE_GAP_PX = 16;
+
+/**
+ * How many connection rows fit on screen without scrolling, measured on the rendered page: from the top
+ * of the list down to the floating navigation, minus everything that must stay visible below the list
+ * (paging, legend, shortcuts), divided by the height of a rendered row. Starts from an estimate and
+ * settles after the first rows are on screen; re-measures on resize.
+ */
+function useFittingRows(
+  listRef: React.RefObject<HTMLElement>,
+  tailRef: React.RefObject<HTMLElement>,
+  layoutKey: string
+): number {
   const [rows, setRows] = useState(() => planRowCount(window.innerHeight));
+  const measure = useCallback(() => {
+    const list = listRef.current;
+    const tail = tailRef.current;
+    if (!list || !tail) return;
+    const nav = document.querySelector("[data-bottom-nav]");
+    const limit = nav ? nav.getBoundingClientRect().top - BOTTOM_NAV_GAP_PX : window.innerHeight - BOTTOM_EDGE_GAP_PX;
+    const listRect = list.getBoundingClientRect();
+    const below = tail.getBoundingClientRect().bottom - listRect.bottom;
+    const rowHeights = Array.from(list.querySelectorAll<HTMLElement>("[data-plan-row]")).map((row) => row.offsetHeight + 1);
+    if (rowHeights.length === 0) return;
+    const rowHeight = Math.max(...rowHeights);
+    const fitting = fittingRowCount(limit - listRect.top - below, rowHeight);
+    setRows((current) => (current === fitting ? current : fitting));
+  }, [listRef, tailRef]);
+  useLayoutEffect(measure, [measure, layoutKey]);
   useEffect(() => {
-    const onResize = () => setRows(planRowCount(window.innerHeight));
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
   return rows;
 }
 
@@ -133,14 +164,18 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
   }, [date, time, kind, today]);
   const anchor = page ?? barAnchor;
 
-  const rows = usePlanRows();
-  const { data: journeys, isLoading, isFetching, isError, error, refresh } = usePlanJourneys(destination, anchor, !includeLongDistance, rows);
+  const { data: journeys, isLoading, isFetching, isError, error, refresh } = usePlanJourneys(destination, anchor, !includeLongDistance, PLAN_MAX_ROWS);
+  const listRef = useRef<HTMLDivElement>(null);
+  const tailRef = useRef<HTMLDivElement>(null);
+  const rows = useFittingRows(listRef, tailRef, `${mode}|${isLoading}|${journeys?.length ?? 0}|${isError}`);
 
-  // "Now" shows what can still be made (plus the last missed one); a chosen time shows the timetable as it is.
+  // Only as many rows as fit on screen. "Now" shows what can still be made (plus the last missed one);
+  // a chosen departure shows the first trains after it, a chosen arrival the last ones before it.
   const sorted = useMemo(() => {
     if (!journeys) return [];
-    const shown = anchor.kind === "now" ? selectNowRows(journeys, timelineModes(mode), now, rows) : journeys;
-    return sortByLeaveTime(shown, lead);
+    if (anchor.kind === "now") return selectNowRows(journeys, timelineModes(mode), now, rows, lead);
+    const byLeave = sortByLeaveTime(journeys, lead);
+    return anchor.kind === "arrival" ? byLeave.slice(-rows) : byLeave.slice(0, rows);
   }, [journeys, anchor.kind, mode, now, rows, lead]);
 
   useNowRefill({
@@ -217,9 +252,10 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
     destination === "work" ? [settings.homeStationName, settings.workStationName] : [settings.workStationName, settings.homeStationName];
 
   return (
-    <div className="space-y-4">
-      <header className="flex items-end justify-between gap-4">
-        <div className="space-y-1">
+    <div className="space-y-3">
+      {/* One line: route, what the list shows, refresh; height goes to the timeline. */}
+      <header className="flex items-center justify-between gap-4">
+        <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="text-lg font-semibold flex items-center gap-2">
             <span className="sr-only">{t(destination === "work" ? "dashboard.work.title" : "dashboard.home.title", language)}:</span>
             <span>{fromName}</span>
@@ -335,6 +371,8 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
 
       {/* Connections */}
       <section className="bg-card rounded-xl border border-border/70 shadow-sm">
+        {/* Column header and rows share one "now" line, drawn once over the timeline column. */}
+        <div className="relative">
         <div className={cn(ROW_GRID, "px-5 pt-3 pb-2 border-b border-border/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground")}>
           <span>{t("plan.col.leave", language)}</span>
           <div>
@@ -346,6 +384,7 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
           <span>{t("plan.col.transfers", language)}</span>
         </div>
 
+        <div ref={listRef}>
         {isLoading ? (
           <div className="p-5 space-y-4">
             {[1, 2, 3, 4].map((i) => (
@@ -362,7 +401,7 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
           <ol className={cn("divide-y divide-border/70 transition-opacity", isFetching && "opacity-60")}>
             {sorted.map((suggestion, index) => (
               <PlanRow
-                key={`${suggestion.journey.departure}-${suggestion.journey.lineName}`}
+                key={connectionKey(suggestion)}
                 suggestion={suggestion}
                 index={index}
                 mode={mode}
@@ -372,6 +411,9 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
             ))}
           </ol>
         )}
+        </div>
+        {axis && sorted.length > 0 && <NowLine axis={axis} now={now} />}
+        </div>
 
         <div className="flex items-center justify-between gap-4 px-5 py-3 border-t border-border/70">
           <PageButton onClick={pageEarlier} disabled={!journeys?.length} testId="plan-earlier">
@@ -386,13 +428,16 @@ export function DashboardPlan({ destination }: { destination: "work" | "home" })
         </div>
       </section>
 
-      <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1" aria-label={t("plan.shortcuts", language)}>
-        <span className="font-medium">{t("plan.shortcuts", language)}</span>
-        <Shortcut keys={["F"]} label={t("plan.key.longDistance", language)} />
-        <Shortcut keys={["R"]} label={t("plan.key.refresh", language)} />
-        <Shortcut keys={["←", "→"]} label={t("plan.key.page", language)} />
-        <Shortcut keys={["N"]} label={t("plan.key.now", language)} />
-      </p>
+      <div ref={tailRef} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+        <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1" aria-label={t("plan.shortcuts", language)}>
+          <span className="font-medium">{t("plan.shortcuts", language)}</span>
+          <Shortcut keys={["F"]} label={t("plan.key.longDistance", language)} />
+          <Shortcut keys={["R"]} label={t("plan.key.refresh", language)} />
+          <Shortcut keys={["←", "→"]} label={t("plan.key.page", language)} />
+          <Shortcut keys={["N"]} label={t("plan.key.now", language)} />
+        </p>
+        <DataSources />
+      </div>
     </div>
   );
 }
@@ -481,7 +526,7 @@ function AxisLabels({ axis }: { axis: TimeAxis }) {
         );
       })}
       {axis.minorTicks.map((tick) => (
-        <span key={tick} className="absolute bottom-0 h-1.5 w-px bg-muted-foreground/40" style={{ left: `${axisPercent(axis, tick)}%` }} />
+        <span key={tick} className="absolute bottom-0 h-2 w-px bg-muted-foreground/60" style={{ left: `${axisPercent(axis, tick)}%` }} />
       ))}
     </div>
   );
@@ -539,8 +584,9 @@ function PlanRow({
 
   return (
     <li
+      data-plan-row
       data-testid={`plan-row-${index}`}
-      className={cn(ROW_GRID, "px-5 py-3.5 hover:bg-secondary/40 transition-colors", missed && "opacity-50")}
+      className={cn(ROW_GRID, "px-5 py-2.5 hover:bg-secondary/40 transition-colors", missed && "opacity-50")}
       title={missed ? t("journey.missed", language) : undefined}
     >
       {/* Leave */}
@@ -679,7 +725,6 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
   const { language } = useLanguage();
   const [barRef, barWidth] = useElementWidth<HTMLDivElement>();
   const segments = lanedSegments(suggestion, mode);
-  const showNow = now > axis.start && now < axis.end;
   const split = mode === "both";
   const legs = suggestion.journey.legs;
   const transferSegments = segments.filter((segment): segment is Extract<typeof segment, { kind: "transfer" }> => segment.kind === "transfer");
@@ -689,10 +734,10 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
       {/* Margins hold the labels: departure times above each train, transfer minutes below. */}
       <div ref={barRef} className={cn("relative mt-4 mb-4", split ? "h-9" : "h-7")}>
         {axis.ticks.map((tick) => (
-          <span key={tick} className="absolute inset-y-0 w-px bg-border" style={{ left: `${axisPercent(axis, tick)}%` }} />
+          <span key={tick} className="absolute inset-y-0 w-px bg-muted-foreground/35" style={{ left: `${axisPercent(axis, tick)}%` }} />
         ))}
         {axis.minorTicks.map((tick) => (
-          <span key={tick} className="absolute inset-y-2 w-px bg-border/50" style={{ left: `${axisPercent(axis, tick)}%` }} />
+          <span key={tick} className="absolute inset-y-1 w-px bg-muted-foreground/20" style={{ left: `${axisPercent(axis, tick)}%` }} />
         ))}
         {segments.map((segment, index) => {
           const left = axisPercent(axis, segment.start);
@@ -764,7 +809,6 @@ function TimelineBar({ suggestion, mode, axis, now }: { suggestion: CommuteSugge
             <span className="sr-only">{transferLabel(segment, language)}</span>
           </span>
         ))}
-        {showNow && <span className="absolute -top-0.5 -bottom-0.5 w-0.5 bg-hurry rounded-full" style={{ left: `${axisPercent(axis, now)}%` }} />}
       </div>
     </div>
   );
@@ -818,6 +862,22 @@ function RideSegment({
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * The current time as one continuous line from the axis labels down through every row. It sits in an
+ * overlay with the same grid as the rows, so its column lines up with each row's timeline.
+ */
+function NowLine({ axis, now }: { axis: TimeAxis; now: number }) {
+  if (now <= axis.start || now >= axis.end) return null;
+  return (
+    <div className={cn(ROW_GRID, "absolute inset-0 px-5 pointer-events-none")} aria-hidden>
+      <span />
+      <div className="relative h-full">
+        <span className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-hurry" style={{ left: `${axisPercent(axis, now)}%` }} />
+      </div>
+    </div>
   );
 }
 
