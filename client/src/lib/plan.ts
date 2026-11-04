@@ -185,7 +185,9 @@ export function selectNowRows(
   /** Order of the reachable rows; the missed one always stays on top. Defaults to train departure. */
   orderBy?: TravelMode
 ): CommuteSuggestion[] {
-  const byDeparture = [...suggestions].sort((a, b) => ms(a.journey.departure) - ms(b.journey.departure));
+  const byDeparture = [...suggestions].sort(
+    (a, b) => ms(a.journey.departure) - ms(b.journey.departure) || byArrivalThenTransfers(a, b)
+  );
   const missed = byDeparture.filter((suggestion) => !reachableBy(suggestion, modes, now));
   let reachable = byDeparture.filter((suggestion) => reachableBy(suggestion, modes, now));
   const lastMissed = missed.at(-1);
@@ -209,31 +211,28 @@ export function mergeSuggestions(first: CommuteSuggestion[], second: CommuteSugg
   return [...first, ...second.filter((suggestion) => !seen.has(connectionKey(suggestion)))];
 }
 
-/**
- * Drop connections nobody would pick: another one leaves (by train) no earlier, arrives no later and needs
- * no more transfers. Typical case: the same first train with a slower onward connection. Exact
- * duplicates keep their first occurrence.
- */
-export function dropDominated(suggestions: CommuteSuggestion[]): CommuteSuggestion[] {
-  const facts = suggestions.map((suggestion) => ({
-    departure: ms(suggestion.journey.departure),
-    arrival: ms(suggestion.journey.arrival),
-    transfers: transferCount(suggestion),
-  }));
-  return suggestions.filter((_, index) => {
-    const own = facts[index];
-    return !facts.some((other, otherIndex) => {
-      if (otherIndex === index) return false;
-      const noWorse = other.departure >= own.departure && other.arrival <= own.arrival && other.transfers <= own.transfers;
-      const better = other.departure > own.departure || other.arrival < own.arrival || other.transfers < own.transfers;
-      return noWorse && (better || otherIndex < index);
-    });
+/** The same connection listed twice (exact duplicate) is shown once; alternatives all stay. */
+export function uniqueConnections(suggestions: CommuteSuggestion[]): CommuteSuggestion[] {
+  const seen = new Set<string>();
+  return suggestions.filter((suggestion) => {
+    const key = connectionKey(suggestion);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
+}
+
+/**
+ * Tie-break for connections that leave at the same time (typically the same first train): the one that
+ * arrives earlier comes first, then the one with fewer transfers.
+ */
+function byArrivalThenTransfers(a: CommuteSuggestion, b: CommuteSuggestion): number {
+  return ms(a.journey.arrival) - ms(b.journey.arrival) || transferCount(a) - transferCount(b);
 }
 
 /** Connections in the order you would leave, so the timeline reads top to bottom. */
 export function sortByLeaveTime(suggestions: CommuteSuggestion[], mode: TravelMode): CommuteSuggestion[] {
-  return [...suggestions].sort((a, b) => ms(leaveTime(a, mode)) - ms(leaveTime(b, mode)));
+  return [...suggestions].sort((a, b) => ms(leaveTime(a, mode)) - ms(leaveTime(b, mode)) || byArrivalThenTransfers(a, b));
 }
 
 export interface TimeAxis {

@@ -11,12 +11,12 @@ import {
   transferCount,
   earlierAnchor,
   connectionKey,
-  dropDominated,
   fittingRowCount,
   lanedSegments,
   mergeSuggestions,
   reachableBy,
   selectNowRows,
+  uniqueConnections,
   planRowCount,
   laterAnchor,
   sortByLeaveTime,
@@ -216,20 +216,15 @@ test("connections sharing their first train get different keys", () => {
   assert.equal(connectionKey(fast), connectionKey(suggestion(0, [[10, 30], [33, 50]])));
 });
 
-test("dominated connections are dropped: same first train with a slower onward connection", () => {
-  // Like four RE1 15:10 variants: same departure, arriving at different times.
-  const best = suggestion(0, [[10, 30], [33, 50]]);
-  const slower = suggestion(0, [[10, 30], [40, 70]]);
-  const moreChanges = suggestion(0, [[10, 20], [22, 35], [37, 50]]);
-  const laterButFaster = suggestion(20, [[30, 45]]); // leaves later and arrives earlier: dominates best too
-  assert.deepEqual(dropDominated([best, slower, moreChanges]), [best]);
-  assert.deepEqual(dropDominated([best, slower, laterButFaster]), [laterButFaster]);
-  // Leaving earlier but arriving earlier: both stay.
-  const early = suggestion(0, [[10, 40]]);
-  const late = suggestion(20, [[30, 60]]);
-  assert.deepEqual(dropDominated([early, late]), [early, late]);
-  // Exact duplicates keep the first one.
-  assert.deepEqual(dropDominated([early, suggestion(0, [[10, 40]])]), [early]);
+test("alternatives sharing the first train all stay; same departure sorts by earlier arrival", () => {
+  // RE1 -> ICE arrives earlier than RE1 -> RB on the same first train: both are listed, the faster first.
+  const viaRegional = suggestion(0, [[10, 30], [40, 70]]);
+  const viaLongDistance = suggestion(0, [[10, 30], [33, 50]]);
+  const later = suggestion(20, [[30, 60]]);
+  assert.deepEqual(uniqueConnections([viaRegional, viaLongDistance, later]), [viaRegional, viaLongDistance, later]);
+  assert.deepEqual(sortByLeaveTime([viaRegional, later, viaLongDistance], "bike"), [viaLongDistance, viaRegional, later]);
+  // Exact duplicates are shown once.
+  assert.deepEqual(uniqueConnections([later, suggestion(20, [[30, 60]])]), [later]);
 });
 
 test("'now' keeps the missed connection on top even when ordering by another mode", () => {

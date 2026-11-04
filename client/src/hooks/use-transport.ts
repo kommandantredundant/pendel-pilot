@@ -4,7 +4,7 @@ import { loadSettings } from "@/lib/settings-storage";
 import { ErrorFactory, isAppError } from "@/lib/app-error";
 import { apiGet, apiPost } from "@/lib/api-client";
 import { TRAVEL_MODES } from "@/lib/glance";
-import { dropDominated, laterAnchor, mergeSuggestions, reachableBy } from "@/lib/plan";
+import { laterAnchor, mergeSuggestions, reachableBy, uniqueConnections } from "@/lib/plan";
 
 /** Transitous returns no stops for one- or two-letter prefixes. */
 export const STATION_SEARCH_MIN_CHARS = 3;
@@ -317,14 +317,14 @@ export async function fetchPlanJourneys(
   results: number,
   now: () => number = Date.now
 ): Promise<CommuteSuggestion[]> {
-  let list = dropDominated(await fetchJourneysAt(destination, anchor, { results, excludeLongDistance }));
+  let list = uniqueConnections(await fetchJourneysAt(destination, anchor, { results, excludeLongDistance }));
   if (anchor.kind !== "now") return list;
 
   for (let page = 0; page < NOW_FILL_PAGES; page++) {
     const reachable = list.filter((suggestion) => reachableBy(suggestion, TRAVEL_MODES, now())).length;
     const next = laterAnchor(list);
     if (reachable >= results || !next) break;
-    list = dropDominated(mergeSuggestions(list, await fetchJourneysAt(destination, next, { results, excludeLongDistance })));
+    list = uniqueConnections(mergeSuggestions(list, await fetchJourneysAt(destination, next, { results, excludeLongDistance })));
   }
   return list;
 }
