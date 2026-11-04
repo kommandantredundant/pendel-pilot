@@ -17,8 +17,6 @@ See the [changelog](./CHANGELOG.md) for what changed in each release.
 
 The UI is a React single-page app; the backend runs as Cloudflare Pages Functions. Journeys come from [Transitous](https://transitous.org), walking and cycling times from OSRM, and address search from Photon. The backend normalizes provider responses into a canonical journey model and handles caching, rate limits, and provider attribution.
 
-The project merges two earlier prototypes: **fromhometowork** contributed the React UI, **dailyjourney** the backend.
-
 - [Architecture](./docs/architecture.md) — data flow, API contracts, providers, storage, and operational constraints.
 - [Decisions](./docs/decisions.md) — durable product and technical choices.
 
