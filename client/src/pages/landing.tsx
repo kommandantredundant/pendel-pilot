@@ -45,14 +45,14 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/70 bg-card/95">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
+      <header className="border-b border-border/70 bg-card/95 pt-safe-top">
+        <div className="max-w-4xl mx-auto px-safe-4 md:px-safe-8 py-3 flex items-center gap-3">
           <TrainIcon className="w-5 h-5 text-primary" />
           <span className="font-semibold">{t("app.title", language)}</span>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 md:px-8">
+      <main className="max-w-4xl mx-auto px-safe-4 md:px-safe-8 pb-safe-bottom">
         {/* Hero */}
         <section className="py-12 md:py-20">
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{l("hero.title")}</h1>

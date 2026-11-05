@@ -97,7 +97,10 @@ export function DashboardGlance({ destination }: { destination: "work" | "home" 
       )}
 
       {/* Thumb zone: refresh sticks just above the bottom navigation and settles above the footer at the end. */}
-      <div className="sticky bottom-[5.5rem] md:bottom-28 z-40 flex justify-center pt-2 pointer-events-none">
+      <div
+        className="sticky z-40 flex justify-center pt-2 pointer-events-none"
+        style={{ bottom: "calc(var(--bottom-nav-space) + 0.5rem)" }}
+      >
         <button
           type="button"
           onClick={() => refresh()}

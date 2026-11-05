@@ -4,8 +4,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Safe areas (notch, rounded corners, gesture bar); 0 unless the page draws edge-to-edge. */
+  .pt-safe-top { padding-top: env(safe-area-inset-top); }
+  .pb-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  /* Like px-4, but at least as wide as the side insets in landscape. */
+  .px-safe-4 {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .px-safe-8 {
+    padding-left: max(2rem, env(safe-area-inset-left));
+    padding-right: max(2rem, env(safe-area-inset-right));
+  }
+}
+
 @layer base {
   :root {
+    /* Overwritten at runtime by BottomNav with its measured height. */
+    --bottom-nav-space: 5.5rem;
     --font-sans: 'Inter', sans-serif;
     /* Times, lines and track numbers: a wide technical mono that reads like a departure board */
     --font-mono: 'Martian Mono', ui-monospace, monospace;

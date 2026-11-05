@@ -17,6 +17,8 @@ Publishing a GitHub release deploys that version to Cloudflare Pages (see README
 - **Home-screen app opens your commute:** the installed web app starts at `/towork` instead of `/`.
 - **OpenStreetMap attribution:** the footer now credits "© OpenStreetMap contributors" (German: "© OpenStreetMap-Mitwirkende"), as OpenStreetMap asks.
 - **Browser language:** until you choose a language in the settings, the app uses your browser's language (German or English) instead of always starting in English.
+- **Glance on phones:** the refresh button no longer slides under the bottom navigation on phones with a gesture bar; it now always sits just above it. The bottom navigation is a bit more compact and no longer adds extra space on top of the gesture bar.
+- **Full-screen and immersive browsers:** the app now draws edge-to-edge and keeps clear of the camera cutout, rounded screen corners and the gesture bar. The title bar no longer disappears into the corners in immersive mode, and in landscape the content stays clear of the notch.
 
 ## 0.1.5
 
