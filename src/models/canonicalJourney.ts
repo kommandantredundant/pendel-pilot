@@ -16,34 +16,43 @@ export interface CanonicalStation extends CanonicalPoint {
   name?: string;
 }
 
-export interface CanonicalBuffersMin {
-  bufferInsideHomeStationMin: number;
-  bufferInsideWorkStationMin: number;
-  bufferLeaveHomeMin: number;
-  bufferLeaveWorkMin: number;
-  bufferPrepareWalkMin: number;
-  bufferPrepareBikeMin: number;
-}
-
-export interface CanonicalBuffersSec {
-  bufferInsideHomeStationSec: number;
-  bufferInsideWorkStationSec: number;
+/**
+ * Buffers belong to one side of the commute: home (home address <-> home station) or work (work station <-> work address).
+ * The two sides are different places, so no buffer is shared between them (see docs/decisions.md). Every buffer of a
+ * side applies in both directions, when leaving towards the station and when arriving from it:
+ * - leave: flat <-> front door (stairs, lift); walking and cycling.
+ * - bike: getting the bike out or putting it away; cycling only.
+ * - bikeParking: bike parking at the station <-> platform; cycling only.
+ * Like every duration in the model, buffers are whole seconds (see docs/decisions.md).
+ */
+export interface CanonicalBuffers {
   bufferLeaveHomeSec: number;
   bufferLeaveWorkSec: number;
-  bufferPrepareWalkSec: number;
-  bufferPrepareBikeSec: number;
+  bufferBikeHomeSec: number;
+  bufferBikeWorkSec: number;
+  bufferBikeParkingHomeSec: number;
+  bufferBikeParkingWorkSec: number;
 }
 
-export type CanonicalBuffers = CanonicalBuffersMin & CanonicalBuffersSec;
+/** Buffers in a calculation request use the canonical names; a missing buffer is 0. */
+export type InputBuffers = Partial<CanonicalBuffers>;
 
-export interface InputBuffers {
-  bufferInsideHomeStation?: number;
-  bufferInsideWorkStation?: number;
-  bufferLeaveHome?: number;
-  bufferLeaveWork?: number;
-  bufferPrepareWalk?: number;
-  bufferPrepareBike?: number;
+/** Upper bound of a buffer (1 h). */
+export const MAX_BUFFER_SEC = 60 * 60;
+
+/**
+ * Durations the user knows better than routing: the whole way between address and platform for one side and one
+ * mode, in seconds. A fixed duration replaces the routed duration and every buffer of that side and mode.
+ */
+export interface FixedDurations {
+  homeWalkSec?: number;
+  homeBikeSec?: number;
+  workWalkSec?: number;
+  workBikeSec?: number;
 }
+
+/** Upper bound of a fixed duration (3 h, like the longest routed walk). */
+export const MAX_FIXED_DURATION_SEC = 3 * 60 * 60;
 
 export type TransportDelayStatus = 'onTime' | 'delayed' | 'unknown';
 
@@ -59,10 +68,11 @@ export interface TransportTiming {
 
 export interface CanonicalJourneySeed extends CanonicalBuffers {
   direction: CanonicalDirection;
-  homeAddress: CanonicalPoint;
+  /** Omitted only when both modes of that side have a fixed duration. */
+  homeAddress?: CanonicalPoint;
   homeStation: CanonicalStation;
   workStation: CanonicalStation;
-  workAddress: CanonicalPoint;
+  workAddress?: CanonicalPoint;
   transportWork?: TransportTiming;
   transportHome?: TransportTiming;
   homeStationTime: string;
@@ -71,6 +81,14 @@ export interface CanonicalJourneySeed extends CanonicalBuffers {
   routeHomeBikeSec: number;
   routeWorkWalkSec: number;
   routeWorkBikeSec: number;
+  /**
+   * Set for each side and mode the user fixed. The matching route*Sec field then holds the same value and
+   * no buffer of that side and mode is added.
+   */
+  fixedHomeWalkSec?: number;
+  fixedHomeBikeSec?: number;
+  fixedWorkWalkSec?: number;
+  fixedWorkBikeSec?: number;
 }
 
 export interface CanonicalJourney extends CanonicalJourneySeed {
@@ -83,8 +101,9 @@ export interface CanonicalJourney extends CanonicalJourneySeed {
 export interface CalculateJourneyRequest {
   homeStationId: string;
   workStationId: string;
-  homeAddress: Coordinates;
-  workAddress: Coordinates;
+  /** Optional only when `fixedDurations` covers both modes of that side. */
+  homeAddress?: Coordinates;
+  workAddress?: Coordinates;
   /**
    * Coordinates of the stations the user picked. When set, first/last-mile routes start at this
    * fixed point instead of the platform the transit provider reports for each connection.
@@ -96,6 +115,7 @@ export interface CalculateJourneyRequest {
   departureTime?: string;
   arrivalTime?: string;
   buffers?: InputBuffers;
+  fixedDurations?: FixedDurations;
   /** Number of connection options to return (1–12, default 1). */
   results?: number;
   /** Skip long-distance trains (ICE/IC/EC) when searching connections. */
@@ -115,23 +135,16 @@ export interface ValidationResult<T> {
   errors?: ValidationErrorDetail[];
 }
 
-export const CANONICAL_BUFFER_MIN_FIELDS = [
-  'bufferInsideHomeStationMin',
-  'bufferInsideWorkStationMin',
-  'bufferLeaveHomeMin',
-  'bufferLeaveWorkMin',
-  'bufferPrepareWalkMin',
-  'bufferPrepareBikeMin'
-] as const;
-
 export const CANONICAL_BUFFER_SEC_FIELDS = [
-  'bufferInsideHomeStationSec',
-  'bufferInsideWorkStationSec',
   'bufferLeaveHomeSec',
   'bufferLeaveWorkSec',
-  'bufferPrepareWalkSec',
-  'bufferPrepareBikeSec'
+  'bufferBikeHomeSec',
+  'bufferBikeWorkSec',
+  'bufferBikeParkingHomeSec',
+  'bufferBikeParkingWorkSec'
 ] as const;
+
+export const CANONICAL_FIXED_DURATION_FIELDS = ['fixedHomeWalkSec', 'fixedHomeBikeSec', 'fixedWorkWalkSec', 'fixedWorkBikeSec'] as const;
 
 export const CANONICAL_ROUTE_DURATION_FIELDS = [
   'routeHomeWalkSec',
@@ -149,23 +162,16 @@ export const CANONICAL_ADDRESS_TIME_FIELDS = [
   'workAddressBikeTime'
 ] as const;
 
-const DEFAULT_BUFFER_MINUTES: Required<InputBuffers> = {
-  bufferInsideHomeStation: 0,
-  bufferInsideWorkStation: 0,
-  bufferLeaveHome: 0,
-  bufferLeaveWork: 0,
-  bufferPrepareWalk: 0,
-  bufferPrepareBike: 0
+const DEFAULT_BUFFERS: CanonicalBuffers = {
+  bufferLeaveHomeSec: 0,
+  bufferLeaveWorkSec: 0,
+  bufferBikeHomeSec: 0,
+  bufferBikeWorkSec: 0,
+  bufferBikeParkingHomeSec: 0,
+  bufferBikeParkingWorkSec: 0
 };
 
-const BUFFER_MIN_TO_SEC_FIELD: Record<keyof CanonicalBuffersMin, keyof CanonicalBuffersSec> = {
-  bufferInsideHomeStationMin: 'bufferInsideHomeStationSec',
-  bufferInsideWorkStationMin: 'bufferInsideWorkStationSec',
-  bufferLeaveHomeMin: 'bufferLeaveHomeSec',
-  bufferLeaveWorkMin: 'bufferLeaveWorkSec',
-  bufferPrepareWalkMin: 'bufferPrepareWalkSec',
-  bufferPrepareBikeMin: 'bufferPrepareBikeSec'
-};
+const FIXED_DURATION_KEYS = ['homeWalkSec', 'homeBikeSec', 'workWalkSec', 'workBikeSec'] as const satisfies readonly (keyof FixedDurations)[];
 
 const NON_CANONICAL_SYNONYM_KEYS = new Set([
   'HomeStationTime',
@@ -178,12 +184,27 @@ const NON_CANONICAL_SYNONYM_KEYS = new Set([
   'RouteHomeBike',
   'RouteWorkWalk',
   'RouteWorkBike',
-  'BufferInsideHomeStation',
-  'BufferInsideWorkStation',
   'BufferLeaveHome',
   'BufferLeaveWork',
-  'BufferPrepareWalk',
-  'BufferPrepareBike',
+  'BufferBikeHome',
+  'BufferBikeWork',
+  'BufferBikeParkingHome',
+  'BufferBikeParkingWork',
+  // Replaced in November 2026 by per-side buffers in whole seconds; rejected so stale payloads cannot pass as canonical.
+  'bufferLeaveHomeMin',
+  'bufferLeaveWorkMin',
+  'bufferBikeHomeMin',
+  'bufferBikeWorkMin',
+  'bufferBikeParkingHomeMin',
+  'bufferBikeParkingWorkMin',
+  'bufferInsideHomeStationMin',
+  'bufferInsideHomeStationSec',
+  'bufferInsideWorkStationMin',
+  'bufferInsideWorkStationSec',
+  'bufferPrepareWalkMin',
+  'bufferPrepareWalkSec',
+  'bufferPrepareBikeMin',
+  'bufferPrepareBikeSec',
   'origin',
   'destination',
   'fromStation',
@@ -199,38 +220,35 @@ export function apiDirectionToCanonical(direction: ApiDirection): CanonicalDirec
 }
 
 export function normalizeBuffers(buffers: InputBuffers = {}): CanonicalBuffers {
-  const merged = { ...DEFAULT_BUFFER_MINUTES, ...buffers };
+  return { ...DEFAULT_BUFFERS, ...buffers };
+}
 
-  return {
-    bufferInsideHomeStationMin: merged.bufferInsideHomeStation,
-    bufferInsideWorkStationMin: merged.bufferInsideWorkStation,
-    bufferLeaveHomeMin: merged.bufferLeaveHome,
-    bufferLeaveWorkMin: merged.bufferLeaveWork,
-    bufferPrepareWalkMin: merged.bufferPrepareWalk,
-    bufferPrepareBikeMin: merged.bufferPrepareBike,
-    bufferInsideHomeStationSec: merged.bufferInsideHomeStation * 60,
-    bufferInsideWorkStationSec: merged.bufferInsideWorkStation * 60,
-    bufferLeaveHomeSec: merged.bufferLeaveHome * 60,
-    bufferLeaveWorkSec: merged.bufferLeaveWork * 60,
-    bufferPrepareWalkSec: merged.bufferPrepareWalk * 60,
-    bufferPrepareBikeSec: merged.bufferPrepareBike * 60
-  };
+/** Seconds between the home address and the home station for one mode: the fixed duration, or route plus buffers. */
+export function homeSideWalkSec(seed: CanonicalJourneySeed): number {
+  return seed.fixedHomeWalkSec ?? seed.routeHomeWalkSec + seed.bufferLeaveHomeSec;
+}
+
+export function homeSideBikeSec(seed: CanonicalJourneySeed): number {
+  return seed.fixedHomeBikeSec ?? seed.routeHomeBikeSec + seed.bufferLeaveHomeSec + seed.bufferBikeHomeSec + seed.bufferBikeParkingHomeSec;
+}
+
+/** Seconds between the work station and the work address for one mode: the fixed duration, or route plus buffers. */
+export function workSideWalkSec(seed: CanonicalJourneySeed): number {
+  return seed.fixedWorkWalkSec ?? seed.routeWorkWalkSec + seed.bufferLeaveWorkSec;
+}
+
+export function workSideBikeSec(seed: CanonicalJourneySeed): number {
+  return seed.fixedWorkBikeSec ?? seed.routeWorkBikeSec + seed.bufferLeaveWorkSec + seed.bufferBikeWorkSec + seed.bufferBikeParkingWorkSec;
 }
 
 export function calculateJourneyWork(seed: CanonicalJourneySeed): CanonicalJourney {
   return {
     ...seed,
     direction: 'journeyWork',
-    homeAddressWalkTime: subtractSeconds(
-      seed.homeStationTime,
-      seed.bufferInsideHomeStationSec + seed.routeHomeWalkSec + seed.bufferPrepareWalkSec + seed.bufferLeaveHomeSec
-    ),
-    homeAddressBikeTime: subtractSeconds(
-      seed.homeStationTime,
-      seed.bufferInsideHomeStationSec + seed.routeHomeBikeSec + seed.bufferPrepareBikeSec + seed.bufferLeaveHomeSec
-    ),
-    workAddressWalkTime: addSeconds(seed.workStationTime, seed.bufferInsideWorkStationSec + seed.routeWorkWalkSec),
-    workAddressBikeTime: addSeconds(seed.workStationTime, seed.bufferInsideWorkStationSec + seed.routeWorkBikeSec)
+    homeAddressWalkTime: subtractSeconds(seed.homeStationTime, homeSideWalkSec(seed)),
+    homeAddressBikeTime: subtractSeconds(seed.homeStationTime, homeSideBikeSec(seed)),
+    workAddressWalkTime: addSeconds(seed.workStationTime, workSideWalkSec(seed)),
+    workAddressBikeTime: addSeconds(seed.workStationTime, workSideBikeSec(seed))
   };
 }
 
@@ -238,16 +256,10 @@ export function calculateJourneyHome(seed: CanonicalJourneySeed): CanonicalJourn
   return {
     ...seed,
     direction: 'journeyHome',
-    homeAddressWalkTime: addSeconds(seed.homeStationTime, seed.bufferInsideHomeStationSec + seed.routeHomeWalkSec),
-    homeAddressBikeTime: addSeconds(seed.homeStationTime, seed.bufferInsideHomeStationSec + seed.routeHomeBikeSec),
-    workAddressWalkTime: subtractSeconds(
-      seed.workStationTime,
-      seed.bufferInsideWorkStationSec + seed.routeWorkWalkSec + seed.bufferPrepareWalkSec + seed.bufferLeaveWorkSec
-    ),
-    workAddressBikeTime: subtractSeconds(
-      seed.workStationTime,
-      seed.bufferInsideWorkStationSec + seed.routeWorkBikeSec + seed.bufferPrepareBikeSec + seed.bufferLeaveWorkSec
-    )
+    homeAddressWalkTime: addSeconds(seed.homeStationTime, homeSideWalkSec(seed)),
+    homeAddressBikeTime: addSeconds(seed.homeStationTime, homeSideBikeSec(seed)),
+    workAddressWalkTime: subtractSeconds(seed.workStationTime, workSideWalkSec(seed)),
+    workAddressBikeTime: subtractSeconds(seed.workStationTime, workSideBikeSec(seed))
   };
 }
 
@@ -265,8 +277,14 @@ export function validateCalculateJourneyRequest(input: unknown): ValidationResul
 
   requireString(body, 'homeStationId', errors);
   requireString(body, 'workStationId', errors);
-  validateCoordinates(body.homeAddress, 'homeAddress', errors);
-  validateCoordinates(body.workAddress, 'workAddress', errors);
+  validateFixedDurations(body.fixedDurations, errors);
+  const fixed = isRecord(body.fixedDurations) ? body.fixedDurations : {};
+  if (body.homeAddress !== undefined || fixed.homeWalkSec === undefined || fixed.homeBikeSec === undefined) {
+    validateCoordinates(body.homeAddress, 'homeAddress', errors);
+  }
+  if (body.workAddress !== undefined || fixed.workWalkSec === undefined || fixed.workBikeSec === undefined) {
+    validateCoordinates(body.workAddress, 'workAddress', errors);
+  }
   if (body.homeStationLocation !== undefined) {
     validateCoordinates(body.homeStationLocation, 'homeStationLocation', errors);
   }
@@ -307,6 +325,22 @@ export function validateCanonicalJourneySeed(input: unknown): ValidationResult<C
   return errors.length > 0 ? { success: false, errors } : { success: true, data: input as CanonicalJourneySeed };
 }
 
+/** Field names a complete canonical journey must carry; listed in the API's error response when one is missing. */
+export function explainRequiredCanonicalJourneyFields(): string[] {
+  return [
+    'direction',
+    'homeAddress',
+    'homeStation',
+    'workStation',
+    'workAddress',
+    'transportWork|transportHome',
+    ...CANONICAL_STATION_ANCHOR_FIELDS,
+    ...CANONICAL_ROUTE_DURATION_FIELDS,
+    ...CANONICAL_BUFFER_SEC_FIELDS,
+    ...CANONICAL_ADDRESS_TIME_FIELDS
+  ];
+}
+
 export function validateCanonicalJourney(input: unknown): ValidationResult<CanonicalJourney> {
   const errors = validateCanonicalJourneyShape(input, true);
   return errors.length > 0 ? { success: false, errors } : { success: true, data: input as CanonicalJourney };
@@ -324,10 +358,14 @@ function validateCanonicalJourneyShape(input: unknown, requireCalculatedTimes: b
     errors.push({ field: 'direction', message: 'Direction must be journeyWork or journeyHome.' });
   }
 
-  validateCanonicalPoint(input.homeAddress, 'homeAddress', errors);
+  if (input.homeAddress !== undefined || input.fixedHomeWalkSec === undefined || input.fixedHomeBikeSec === undefined) {
+    validateCanonicalPoint(input.homeAddress, 'homeAddress', errors);
+  }
   validateCanonicalStation(input.homeStation, 'homeStation', errors);
   validateCanonicalStation(input.workStation, 'workStation', errors);
-  validateCanonicalPoint(input.workAddress, 'workAddress', errors);
+  if (input.workAddress !== undefined || input.fixedWorkWalkSec === undefined || input.fixedWorkBikeSec === undefined) {
+    validateCanonicalPoint(input.workAddress, 'workAddress', errors);
+  }
 
   requireIsoDateTime(input, 'homeStationTime', errors);
   requireIsoDateTime(input, 'workStationTime', errors);
@@ -336,15 +374,14 @@ function validateCanonicalJourneyShape(input: unknown, requireCalculatedTimes: b
     requireNonNegativeInteger(input, field, errors);
   }
 
-  for (const field of CANONICAL_BUFFER_MIN_FIELDS) {
-    requireNonNegativeNumber(input, field, errors);
-  }
-
   for (const field of CANONICAL_BUFFER_SEC_FIELDS) {
     requireNonNegativeInteger(input, field, errors);
   }
 
-  validateDerivedBufferSeconds(input, errors);
+  for (const field of CANONICAL_FIXED_DURATION_FIELDS) {
+    requireOptionalNonNegativeInteger(input, field, errors);
+  }
+
   validateDirectionTransport(input, errors);
 
   if (requireCalculatedTimes) {
@@ -408,17 +445,6 @@ function validateTransportTiming(value: unknown, field: string, errors: Validati
   validateDelayStatus(value, errors, field);
 }
 
-function validateDerivedBufferSeconds(input: Record<string, unknown>, errors: ValidationErrorDetail[]): void {
-  for (const minField of CANONICAL_BUFFER_MIN_FIELDS) {
-    const secField = BUFFER_MIN_TO_SEC_FIELD[minField];
-    const minValue = input[minField];
-    const secValue = input[secField];
-    if (typeof minValue === 'number' && typeof secValue === 'number' && secValue !== minValue * 60) {
-      errors.push({ field: secField, message: `${secField} must equal ${minField} * 60.` });
-    }
-  }
-}
-
 function validateNoNonCanonicalSynonyms(input: unknown, errors: ValidationErrorDetail[], path = ''): void {
   if (!isRecord(input)) {
     return;
@@ -458,13 +484,6 @@ function requireOptionalIsoDateTime(body: Record<string, unknown>, field: string
     return;
   }
   requireIsoDateTime(body, field, errors, prefix);
-}
-
-function requireNonNegativeNumber(body: Record<string, unknown>, field: string, errors: ValidationErrorDetail[]): void {
-  const value = body[field];
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-    errors.push({ field, message: `${field} must be a non-negative finite number.` });
-  }
 }
 
 function requireNonNegativeInteger(body: Record<string, unknown>, field: string, errors: ValidationErrorDetail[]): void {
@@ -556,10 +575,35 @@ function validateInputBuffers(value: unknown, errors: ValidationErrorDetail[]): 
     return;
   }
 
-  for (const key of Object.keys(DEFAULT_BUFFER_MINUTES)) {
+  for (const key of CANONICAL_BUFFER_SEC_FIELDS) {
     const candidate = value[key];
-    if (candidate !== undefined && (typeof candidate !== 'number' || !Number.isFinite(candidate) || candidate < 0)) {
-      errors.push({ field: `buffers.${key}`, message: `${key} must be a non-negative number of minutes.` });
+    if (candidate !== undefined && (typeof candidate !== 'number' || !Number.isInteger(candidate) || candidate < 0 || candidate > MAX_BUFFER_SEC)) {
+      errors.push({ field: `buffers.${key}`, message: `${key} must be an integer number of seconds from 0 to ${MAX_BUFFER_SEC}.` });
+    }
+  }
+  for (const key of Object.keys(value)) {
+    if (!(CANONICAL_BUFFER_SEC_FIELDS as readonly string[]).includes(key)) {
+      errors.push({ field: `buffers.${key}`, message: `${key} is not a buffer; buffers are ${CANONICAL_BUFFER_SEC_FIELDS.join(', ')}.` });
+    }
+  }
+}
+
+function validateFixedDurations(value: unknown, errors: ValidationErrorDetail[]): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!isRecord(value)) {
+    errors.push({ field: 'fixedDurations', message: 'fixedDurations must be an object when provided.' });
+    return;
+  }
+
+  for (const key of FIXED_DURATION_KEYS) {
+    const candidate = value[key];
+    if (
+      candidate !== undefined &&
+      (typeof candidate !== 'number' || !Number.isInteger(candidate) || candidate < 0 || candidate > MAX_FIXED_DURATION_SEC)
+    ) {
+      errors.push({ field: `fixedDurations.${key}`, message: `${key} must be an integer number of seconds from 0 to ${MAX_FIXED_DURATION_SEC}.` });
     }
   }
 }

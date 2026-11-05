@@ -12,6 +12,7 @@ import {
   type CanonicalJourneySeed,
   type CanonicalPoint,
   type CanonicalStation,
+  type Coordinates,
   type TransportTiming,
   type ValidationErrorDetail
 } from '../models/canonical.ts';
@@ -89,8 +90,9 @@ export class JourneyCalculationService {
 
   private async createCalculatedResult(request: CalculateJourneyRequest): Promise<JourneyCalculationResult> {
     const canonicalDirection = apiDirectionToCanonical(request.direction);
-    const homeAddress = coordinatesToCanonicalPoint(request.homeAddress);
-    const workAddress = coordinatesToCanonicalPoint(request.workAddress);
+    const homeAddress = request.homeAddress && coordinatesToCanonicalPoint(request.homeAddress);
+    const workAddress = request.workAddress && coordinatesToCanonicalPoint(request.workAddress);
+    const fixed = request.fixedDurations ?? {};
     const transportConnections = await this.resolveRequiredTransportConnections(request);
     const buffers = normalizeBuffers(request.buffers);
     const homeStationPoint = request.homeStationLocation && coordinatesToCanonicalPoint(request.homeStationLocation);
@@ -116,10 +118,10 @@ export class JourneyCalculationService {
 
       const seed: CanonicalJourneySeed = {
         direction: canonicalDirection,
-        homeAddress,
+        ...(homeAddress ? { homeAddress } : {}),
         homeStation,
         workStation,
-        workAddress,
+        ...(workAddress ? { workAddress } : {}),
         ...(canonicalDirection === 'journeyWork'
           ? {
               transportWork: transportTiming,
@@ -131,10 +133,15 @@ export class JourneyCalculationService {
               workStationTime: transportTiming.departureTime,
               homeStationTime: transportTiming.arrivalTime
             }),
-        routeHomeWalkSec: await routeDuration(homeAddress, stationRoutePoint(homeStation, homeStationPoint), 'foot'),
-        routeHomeBikeSec: await routeDuration(homeAddress, stationRoutePoint(homeStation, homeStationPoint), 'bike'),
-        routeWorkWalkSec: await routeDuration(stationRoutePoint(workStation, workStationPoint), workAddress, 'foot'),
-        routeWorkBikeSec: await routeDuration(stationRoutePoint(workStation, workStationPoint), workAddress, 'bike'),
+        // A fixed duration replaces the route of that side and mode; the address is not needed for it.
+        routeHomeWalkSec: fixed.homeWalkSec ?? (await routeDuration(homeAddress!, stationRoutePoint(homeStation, homeStationPoint), 'foot')),
+        routeHomeBikeSec: fixed.homeBikeSec ?? (await routeDuration(homeAddress!, stationRoutePoint(homeStation, homeStationPoint), 'bike')),
+        routeWorkWalkSec: fixed.workWalkSec ?? (await routeDuration(stationRoutePoint(workStation, workStationPoint), workAddress!, 'foot')),
+        routeWorkBikeSec: fixed.workBikeSec ?? (await routeDuration(stationRoutePoint(workStation, workStationPoint), workAddress!, 'bike')),
+        ...(fixed.homeWalkSec !== undefined ? { fixedHomeWalkSec: fixed.homeWalkSec } : {}),
+        ...(fixed.homeBikeSec !== undefined ? { fixedHomeBikeSec: fixed.homeBikeSec } : {}),
+        ...(fixed.workWalkSec !== undefined ? { fixedWorkWalkSec: fixed.workWalkSec } : {}),
+        ...(fixed.workBikeSec !== undefined ? { fixedWorkBikeSec: fixed.workBikeSec } : {}),
         ...buffers
       };
 
@@ -262,7 +269,7 @@ export function stationRoutePoint(platform: CanonicalPoint, chosenStation: Canon
   return platform;
 }
 
-function coordinatesToCanonicalPoint(coordinates: CalculateJourneyRequest['homeAddress']): CanonicalPoint {
+function coordinatesToCanonicalPoint(coordinates: Coordinates): CanonicalPoint {
   return { lat: coordinates.latitude, lon: coordinates.longitude };
 }
 

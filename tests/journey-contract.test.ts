@@ -11,7 +11,6 @@ import type { TransitClient } from '../src/clients/transit.client.ts';
 import type { OsrmClient, OsrmProfile } from '../src/clients/osrm.client.ts';
 import {
   CANONICAL_ADDRESS_TIME_FIELDS,
-  CANONICAL_BUFFER_MIN_FIELDS,
   CANONICAL_BUFFER_SEC_FIELDS,
   CANONICAL_ROUTE_DURATION_FIELDS,
   CANONICAL_STATION_ANCHOR_FIELDS,
@@ -66,12 +65,12 @@ function workSeed(overrides: Partial<CanonicalJourneySeed> = {}): CanonicalJourn
     routeWorkWalkSec: 540,
     routeWorkBikeSec: 230,
     ...normalizeBuffers({
-      bufferInsideHomeStation: 5,
-      bufferInsideWorkStation: 3,
-      bufferLeaveHome: 4,
-      bufferLeaveWork: 6,
-      bufferPrepareWalk: 1,
-      bufferPrepareBike: 2
+      bufferLeaveHomeSec: 240,
+      bufferLeaveWorkSec: 360,
+      bufferBikeHomeSec: 120,
+      bufferBikeWorkSec: 60,
+      bufferBikeParkingHomeSec: 300,
+      bufferBikeParkingWorkSec: 180
     }),
     ...overrides
   };
@@ -161,7 +160,6 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
       for (const field of [
         ...CANONICAL_STATION_ANCHOR_FIELDS,
         ...CANONICAL_ROUTE_DURATION_FIELDS,
-        ...CANONICAL_BUFFER_MIN_FIELDS,
         ...CANONICAL_BUFFER_SEC_FIELDS,
         ...CANONICAL_ADDRESS_TIME_FIELDS
       ]) {
@@ -243,8 +241,10 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
     assert.equal(journeyWork.routeHomeBikeSec, 240);
     assert.equal(journeyWork.routeWorkWalkSec, 480);
     assert.equal(journeyWork.routeWorkBikeSec, 180);
-    assert.equal(journeyWork.homeAddressWalkTime, '2026-04-10T05:35:00.000Z');
-    assert.equal(journeyWork.workAddressBikeTime, '2026-04-10T06:21:00.000Z');
+    // 05:55 - (600 s route + 4 min leaving)
+    assert.equal(journeyWork.homeAddressWalkTime, '2026-04-10T05:41:00.000Z');
+    // 06:15 + (180 s route + 6 min leaving + 2 min bike + 3 min bike parking)
+    assert.equal(journeyWork.workAddressBikeTime, '2026-04-10T06:29:00.000Z');
   });
 
   it('wires canonical calculation into the API response path', async () => {
@@ -386,7 +386,7 @@ describe('POST /api/journeys/calculate contract fixtures', () => {
     if (!journeyWork) {
       throw new Error('Expected journeyWork fallback calculation.');
     }
-    assert.equal(journeyWork.routeHomeWalkSec, estimateRouteDurationSec(journeyWork.homeAddress, journeyWork.homeStation, 'foot'));
+    assert.equal(journeyWork.routeHomeWalkSec, estimateRouteDurationSec(journeyWork.homeAddress!, journeyWork.homeStation, 'foot'));
     assert.ok(journeyWork.routeHomeWalkSec >= 60);
     assert.ok(journeyWork.routeHomeWalkSec <= 10_800);
   });
@@ -531,10 +531,14 @@ describe('canonical journey calculation core', () => {
     assert.deepEqual(calculateJourneyWork(workSeed()), {
       ...workSeed(),
       direction: 'journeyWork',
-      homeAddressWalkTime: '2026-04-10T05:31:00.000Z',
+      // 05:52 - (660 s route + 4 min leaving)
+      homeAddressWalkTime: '2026-04-10T05:37:00.000Z',
+      // 05:52 - (290 s route + 4 min leaving + 2 min bike + 5 min bike parking)
       homeAddressBikeTime: '2026-04-10T05:36:10.000Z',
-      workAddressWalkTime: '2026-04-10T06:23:00.000Z',
-      workAddressBikeTime: '2026-04-10T06:17:50.000Z'
+      // 06:11 + (540 s route + 6 min leaving): the work side's buffers apply on arrival too
+      workAddressWalkTime: '2026-04-10T06:26:00.000Z',
+      // 06:11 + (230 s route + 6 min leaving + 1 min bike + 3 min bike parking)
+      workAddressBikeTime: '2026-04-10T06:24:50.000Z'
     });
   });
 
@@ -542,11 +546,63 @@ describe('canonical journey calculation core', () => {
     assert.deepEqual(calculateJourneyHome(homeSeed()), {
       ...homeSeed(),
       direction: 'journeyHome',
-      homeAddressWalkTime: '2026-04-10T16:06:00.000Z',
-      homeAddressBikeTime: '2026-04-10T15:59:50.000Z',
-      workAddressWalkTime: '2026-04-10T15:12:00.000Z',
-      workAddressBikeTime: '2026-04-10T15:16:10.000Z'
+      homeAddressWalkTime: '2026-04-10T16:05:00.000Z',
+      homeAddressBikeTime: '2026-04-10T16:05:50.000Z',
+      workAddressWalkTime: '2026-04-10T15:16:00.000Z',
+      workAddressBikeTime: '2026-04-10T15:17:10.000Z'
     });
+  });
+
+  it('takes buffers in whole seconds and rejects anything else in a request', () => {
+    const request = fixture<Record<string, unknown>>('calculate.work.request.json');
+    const buffers = normalizeBuffers({ bufferLeaveHomeSec: 45 });
+
+    // 05:52 - (660 s route + 45 s leaving)
+    assert.equal(calculateJourneyWork(workSeed(buffers)).homeAddressWalkTime, '2026-04-10T05:40:15.000Z');
+    for (const [key, value] of [
+      ['bufferLeaveHomeSec', 1.5],
+      ['bufferLeaveHomeSec', -1],
+      ['bufferLeaveHomeSec', 3601],
+      ['bufferLeaveHome', 2]
+    ] as const) {
+      const result = validateCalculateJourneyRequest({ ...request, buffers: { [key]: value } });
+      assert.equal(result.success, false, `expected ${key}: ${value} to be rejected`);
+      assert.deepEqual(result.errors?.map((error) => error.field), [`buffers.${key}`]);
+    }
+  });
+
+  it('keeps the two sides apart: a buffer of one side never moves the times of the other side', () => {
+    const baseline = calculateJourneyWork(workSeed());
+    const moreHomeBuffers = calculateJourneyWork(
+      workSeed(normalizeBuffers({ bufferLeaveHomeSec: 600, bufferLeaveWorkSec: 360, bufferBikeHomeSec: 600, bufferBikeWorkSec: 60, bufferBikeParkingHomeSec: 600, bufferBikeParkingWorkSec: 180 }))
+    );
+
+    assert.equal(moreHomeBuffers.workAddressWalkTime, baseline.workAddressWalkTime);
+    assert.equal(moreHomeBuffers.workAddressBikeTime, baseline.workAddressBikeTime);
+    assert.notEqual(moreHomeBuffers.homeAddressBikeTime, baseline.homeAddressBikeTime);
+  });
+
+  it('adds bike buffers to cycling only, never to walking', () => {
+    const baseline = calculateJourneyWork(workSeed());
+    const moreBikeBuffers = calculateJourneyWork(
+      workSeed(normalizeBuffers({ bufferLeaveHomeSec: 240, bufferLeaveWorkSec: 360, bufferBikeHomeSec: 540, bufferBikeWorkSec: 540, bufferBikeParkingHomeSec: 540, bufferBikeParkingWorkSec: 540 }))
+    );
+
+    assert.equal(moreBikeBuffers.homeAddressWalkTime, baseline.homeAddressWalkTime);
+    assert.equal(moreBikeBuffers.workAddressWalkTime, baseline.workAddressWalkTime);
+    assert.equal(Date.parse(baseline.homeAddressBikeTime) - Date.parse(moreBikeBuffers.homeAddressBikeTime), 11 * 60_000);
+    assert.equal(Date.parse(moreBikeBuffers.workAddressBikeTime) - Date.parse(baseline.workAddressBikeTime), 14 * 60_000);
+  });
+
+  it('uses a fixed duration instead of route and buffers for that side and mode only', () => {
+    const journey = calculateJourneyWork(workSeed({ routeHomeWalkSec: 754, fixedHomeWalkSec: 754 }));
+
+    // 05:52 - 12:34, no leaving buffer added
+    assert.equal(journey.homeAddressWalkTime, '2026-04-10T05:39:26.000Z');
+    // cycling from home and both modes at work keep route plus buffers
+    assert.equal(journey.homeAddressBikeTime, '2026-04-10T05:36:10.000Z');
+    assert.equal(journey.workAddressWalkTime, '2026-04-10T06:26:00.000Z');
+    assert.equal(journey.workAddressBikeTime, '2026-04-10T06:24:50.000Z');
   });
 
   it('AC6 deterministically reflects buffer-minute changes in computed timestamps', () => {
@@ -554,12 +610,12 @@ describe('canonical journey calculation core', () => {
     const withExtraLeaveHomeMinute = calculateJourneyWork(
       workSeed({
         ...normalizeBuffers({
-          bufferInsideHomeStation: 5,
-          bufferInsideWorkStation: 3,
-          bufferLeaveHome: 5,
-          bufferLeaveWork: 6,
-          bufferPrepareWalk: 1,
-          bufferPrepareBike: 2
+          bufferLeaveHomeSec: 300,
+          bufferLeaveWorkSec: 360,
+          bufferBikeHomeSec: 120,
+          bufferBikeWorkSec: 60,
+          bufferBikeParkingHomeSec: 300,
+          bufferBikeParkingWorkSec: 180
         })
       })
     );
@@ -590,8 +646,7 @@ describe('canonical journey validation', () => {
 
     const invalid = validateCanonicalJourneySeed({
       ...workSeed({ routeHomeWalkSec: 1.5 }),
-      bufferPrepareBikeMin: -2,
-      bufferPrepareBikeSec: 121,
+      bufferBikeHomeSec: 1.5,
       workStationTime: '2026-04-10T06:12:00.000Z',
       homeStation: { id: '', lat: 52.475, lon: 13.365 }
     });
@@ -599,7 +654,7 @@ describe('canonical journey validation', () => {
     assert.equal(invalid.success, false);
     assert.deepEqual(
       invalid.errors?.map((error) => error.field).sort(),
-      ['bufferPrepareBikeMin', 'bufferPrepareBikeSec', 'homeStation.id', 'routeHomeWalkSec', 'workStationTime']
+      ['bufferBikeHomeSec', 'homeStation.id', 'routeHomeWalkSec', 'workStationTime']
     );
   });
 

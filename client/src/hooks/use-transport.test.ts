@@ -14,10 +14,12 @@ const sampleSettings = {
   homeLon: 13.369,
   workLat: 52.521,
   workLon: 13.411,
-  walkBufferMinutes: 5,
-  bikeBufferMinutes: 3,
-  homeLeavingBufferMinutes: 2,
-  workLeavingBufferMinutes: 2,
+  homeLeavingBufferSeconds: 120,
+  workLeavingBufferSeconds: 45,
+  homeBikeBufferSeconds: 180,
+  workBikeBufferSeconds: 0,
+  homeBikeParkingSeconds: 240,
+  workBikeParkingSeconds: 90,
   excludeFernverkehr: 0,
   language: "de",
 };
@@ -79,9 +81,47 @@ test("fetchJourneys posts the saved profile to /api/journeys/calculate and maps 
   assert.deepEqual(request?.body.workStationLocation, { latitude: 52.5219, longitude: 13.4132 });
   assert.equal(request?.body.homeStationLocation, undefined);
   assert.equal(request?.body.excludeLongDistance, true);
-  assert.deepEqual(request?.body.buffers, { bufferLeaveHome: 2, bufferLeaveWork: 2, bufferPrepareWalk: 5, bufferPrepareBike: 3 });
+  assert.deepEqual(request?.body.buffers, {
+    bufferLeaveHomeSec: 120,
+    bufferLeaveWorkSec: 45,
+    bufferBikeHomeSec: 180,
+    bufferBikeWorkSec: 0,
+    bufferBikeParkingHomeSec: 240,
+    bufferBikeParkingWorkSec: 90,
+  });
+  assert.equal(request?.body.fixedDurations, undefined);
   assert.ok(request?.body.departureTime);
   assert.deepEqual(suggestions.map((s) => s.journey.lineName), ["S 2", "RE 1"]);
+});
+
+test("fetchJourneys sends ticked fixed times only and leaves out the address of a side that is fixed for both modes", async () => {
+  (globalThis as any).window.localStorage.setItem(
+    SETTINGS_KEY,
+    JSON.stringify({
+      ...sampleSettings,
+      homeAddress: "",
+      homeLat: undefined,
+      homeLon: undefined,
+      homeWalkFixed: 1,
+      homeWalkFixedSeconds: 754,
+      homeBikeFixed: 1,
+      homeBikeFixedSeconds: 420,
+      // Unticked: kept in the settings, but routing is used.
+      workWalkFixed: 0,
+      workWalkFixedSeconds: 600,
+    })
+  );
+  let body: any;
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    body = JSON.parse(String(init.body));
+    return new Response(JSON.stringify({ success: true, data: { options: [sampleOption("S 2")] } }));
+  }) as unknown as typeof fetch;
+
+  await fetchJourneys("work");
+
+  assert.deepEqual(body.fixedDurations, { homeWalkSec: 754, homeBikeSec: 420 });
+  assert.equal(body.homeAddress, undefined);
+  assert.deepEqual(body.workAddress, { latitude: 52.521, longitude: 13.411 });
 });
 
 test("fetchJourneys sends an arrival anchor when planning ahead by arrival time", async () => {

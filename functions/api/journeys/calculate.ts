@@ -1,7 +1,7 @@
 import { HttpTransitousClient } from '../../../src/clients/transitous.client.ts';
 import { HttpOsrmClient } from '../../../src/clients/osrm.client.ts';
 import { PROVIDER_POLICIES } from '../../../src/clients/providerCompliance.ts';
-import { explainRequiredPersistedJourneyFields, validatePersistedJourney } from '../../../src/models/localPersistence.ts';
+import { explainRequiredCanonicalJourneyFields, validateCanonicalJourney } from '../../../src/models/canonicalJourney.ts';
 import {
   ITINERARY_CACHE_PERSISTENCE_EVENTS,
   JourneyCalculationService,
@@ -36,12 +36,12 @@ export const onRequestPost: PagesFunction = async ({ request }) => {
       return upstreamBadResponseError(startedAtMs, 'Canonical journey payload is missing for selected direction.');
     }
 
-    const canonicalValidation = validatePersistedJourney(canonicalJourney);
+    const canonicalValidation = validateCanonicalJourney(canonicalJourney);
     if (!canonicalValidation.success) {
       return upstreamBadResponseError(
         startedAtMs,
         'Canonical journey payload is missing required fields.',
-        { requiredFields: explainRequiredPersistedJourneyFields(), errors: canonicalValidation.errors }
+        { requiredFields: explainRequiredCanonicalJourneyFields(), errors: canonicalValidation.errors }
       );
     }
 
