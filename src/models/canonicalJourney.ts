@@ -325,6 +325,22 @@ export function validateCanonicalJourneySeed(input: unknown): ValidationResult<C
   return errors.length > 0 ? { success: false, errors } : { success: true, data: input as CanonicalJourneySeed };
 }
 
+/** Field names a complete canonical journey must carry; listed in the API's error response when one is missing. */
+export function explainRequiredCanonicalJourneyFields(): string[] {
+  return [
+    'direction',
+    'homeAddress',
+    'homeStation',
+    'workStation',
+    'workAddress',
+    'transportWork|transportHome',
+    ...CANONICAL_STATION_ANCHOR_FIELDS,
+    ...CANONICAL_ROUTE_DURATION_FIELDS,
+    ...CANONICAL_BUFFER_SEC_FIELDS,
+    ...CANONICAL_ADDRESS_TIME_FIELDS
+  ];
+}
+
 export function validateCanonicalJourney(input: unknown): ValidationResult<CanonicalJourney> {
   const errors = validateCanonicalJourneyShape(input, true);
   return errors.length > 0 ? { success: false, errors } : { success: true, data: input as CanonicalJourney };

@@ -63,15 +63,13 @@ Use request deduplication, debounce address searches by 300–500 ms, and honor 
 
 ## Browser storage
 
-The React UI stores its profile (addresses with coordinates, stations, buffers, language, long-distance filter) under `pendelpilot.settings.v1` (`client/src/lib/settings-storage.ts`).
+The React UI keeps everything in `localStorage`; there is no other browser state and no server-side user data:
 
-The backend model also defines a richer versioned store under `dailyjourney.v4.*` (`src/models/localPersistence.ts`, used by the view models in `src/frontend/`), which the React UI does not use yet:
+- `pendelpilot.settings.v1` — the profile: addresses with coordinates, stations, per-side buffers and fixed times, travel modes, long-distance filter, view choices, language (`client/src/lib/settings-storage.ts`, which also migrates older profiles).
+- `pendelpilot.theme` and `language` — appearance and language until a profile is saved.
+- `pendelpilot.api-metrics` — local request counters (`client/src/lib/metrics.ts`).
 
-- `commuteProfiles`, selected station/address snapshots, and buffer presets restore the user’s setup.
-- Persisted canonical journeys and transit, Photon, and OSRM cache envelopes provide bounded fallback behavior.
-- OSRM stores duration-only walk/bike data—not route geometry, instructions, or full upstream responses.
-
-Invalidate cache when addresses, stations, direction, buffer/routing assumptions, or the cache-key version changes; a manual refresh bypasses the relevant TTL. DB cache is short-lived (about 60–120 seconds), Photon cache is 7–30 days, and OSRM durations default to 14 days with a maximum 30-day stale window. The precise types, keys, validation, migration, and invalidation logic are in `src/models/localPersistence.ts`.
+Journeys are not stored in the browser; each view asks `/api/journeys/calculate` again. Walk and bike durations are cached by the backend (see "Providers and resilience").
 
 ## Operations
 
