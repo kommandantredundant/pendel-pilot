@@ -120,31 +120,41 @@ export function SettingsSideSection({
             </FormItem>
           )}
         />
-        {/* Left: what counts on foot (leaving buffer, walking). Right: what counts by bike only. */}
-        <div className="grid grid-cols-2 gap-4 border-t border-border/70 pt-4">
-          <div className="space-y-4">
-            {/* Tinted tile: the leaving buffer applies to both modes. */}
-            <div className="rounded-lg bg-muted/70 p-3">
-              <MinutesField form={form} name={fields.leaving} label="settings.leaving.buffer" description="settings.leaving.desc" disabled={notRouted} language={language} />
-            </div>
-            <div className="space-y-3">
-              <p className="flex items-center gap-2 text-sm font-medium">
-                <Footprints className="w-4 h-4 text-muted-foreground" /> {t("settings.side.walk", language)}
-              </p>
-              <FixedTimeField form={form} flag={fields.walkFixed} seconds={fields.walkFixedSeconds} description="settings.fixed.walk.desc" language={language} />
-            </div>
+        {/*
+          Left: what counts on foot (leaving buffer, walking). Right: what counts by bike only.
+          Two grid rows, so both "fixed time" fields start at the same height whatever the buffers above need.
+        */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-border/70 pt-4">
+          {/* Tinted tile: the leaving buffer applies to both modes. */}
+          <div className="self-start rounded-lg bg-muted/70 p-3">
+            <MinutesField form={form} name={fields.leaving} label="settings.leaving.buffer" description="settings.leaving.desc" disabled={notRouted} language={language} />
           </div>
           <div className="space-y-4">
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <Bike className="w-4 h-4 text-muted-foreground" /> {t("settings.side.bike", language)}
-            </p>
+            <ModeHeading mode="bike" language={language} />
             <MinutesField form={form} name={fields.bike} label="settings.biking.buffer" description="settings.biking.buffer.desc" disabled={bikeFixed} language={language} />
             <MinutesField form={form} name={fields.bikeParking} label="settings.bikeParking.buffer" description="settings.bikeParking.buffer.desc" disabled={bikeFixed} language={language} />
+          </div>
+          <div className="space-y-3">
+            <ModeHeading mode="walk" language={language} />
+            <FixedTimeField form={form} flag={fields.walkFixed} seconds={fields.walkFixedSeconds} description="settings.fixed.walk.desc" language={language} />
+          </div>
+          <div className="space-y-3">
+            {/* Invisible twin of the "On foot" heading keeps the two fixed-time fields level. */}
+            <ModeHeading mode="walk" language={language} hidden />
             <FixedTimeField form={form} flag={fields.bikeFixed} seconds={fields.bikeFixedSeconds} description="settings.fixed.bike.desc" language={language} />
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ModeHeading({ mode, language, hidden = false }: { mode: "walk" | "bike"; language: Language; hidden?: boolean }) {
+  const Icon = mode === "walk" ? Footprints : Bike;
+  return (
+    <p className={`flex items-center gap-2 text-sm font-medium${hidden ? " invisible" : ""}`} aria-hidden={hidden || undefined}>
+      <Icon className="w-4 h-4 text-muted-foreground" /> {t(`settings.side.${mode}`, language)}
+    </p>
   );
 }
 
