@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Save, MapPin, Footprints, Bike, Loader2, Zap, Route, AlertCircle, Eye, CalendarRange } from "lucide-react";
+import { Save, Loader2, Zap, Route, Eye, CalendarRange } from "lucide-react";
 import { useLocation } from "wouter";
-import { insertSettingsSchema } from "@shared/client-schema";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
-import { StationSearch } from "@/components/station-search";
+import { SettingsSideSection } from "@/components/settings-side-section";
 import { ErrorDisplay } from "@/components/error-display";
 import { t } from "@/lib/i18n";
 import { useLanguage } from "@/lib/language-context";
 import type { Language } from "@/lib/i18n";
 import { isStorageAvailable } from "@/lib/settings-storage";
+import { settingsFormSchema, type SettingsFormValues } from "@/lib/settings-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import {
@@ -21,9 +20,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,22 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Using z.coerce.number for form numeric inputs to fix types
-const formSchema = insertSettingsSchema.extend({
-  walkBufferMinutes: z.coerce.number().min(0).max(60),
-  bikeBufferMinutes: z.coerce.number().min(0).max(60),
-  homeLeavingBufferMinutes: z.coerce.number().min(0).max(60),
-  workLeavingBufferMinutes: z.coerce.number().min(0).max(60),
-  excludeFernverkehr: z.coerce.number().min(0).max(1),
-  glanceMode: z.coerce.number().min(0).max(1),
-  planMode: z.coerce.number().min(0).max(1),
-  stationModeFromHome: z.enum(["walk", "bike", "both"]),
-  stationModeFromWork: z.enum(["walk", "bike", "both"]),
-  language: z.enum(["en", "de"]).default("en"),
-});
-
-type SettingsFormValues = z.infer<typeof formSchema>;
-
 export default function SettingsPage() {
   const [, setLocation] = useLocation();
   const { language, setLanguage } = useLanguage();
@@ -63,7 +44,7 @@ export default function SettingsPage() {
   const [routingError, setRoutingError] = useState<Error | unknown>(null);
 
   const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(settingsFormSchema),
     defaultValues: {
       homeAddress: "",
       homeStationId: "",
@@ -71,10 +52,16 @@ export default function SettingsPage() {
       workAddress: "",
       workStationId: "",
       workStationName: "",
-      walkBufferMinutes: 0,
-      bikeBufferMinutes: 0,
       homeLeavingBufferMinutes: 0,
       workLeavingBufferMinutes: 0,
+      homeBikeBufferMinutes: 0,
+      workBikeBufferMinutes: 0,
+      homeBikeParkingMinutes: 0,
+      workBikeParkingMinutes: 0,
+      homeWalkFixed: 0,
+      homeBikeFixed: 0,
+      workWalkFixed: 0,
+      workBikeFixed: 0,
       excludeFernverkehr: 0,
       glanceMode: 0,
       planMode: 0,
@@ -231,204 +218,8 @@ export default function SettingsPage() {
         {/* The save button lives in the sticky header, outside this element; it targets the form by id. */}
         <form id="settings-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           
-          {/* Home Settings Card */}
-          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MapPin className="w-4 h-4 text-muted-foreground" /> {t('settings.home', language)}
-              </CardTitle>
-              <CardDescription>{t('settings.home.desc', language)}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <FormField
-                control={form.control}
-                name="homeAddress"
-                render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>{t('settings.home.address', language)}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('settings.home.address.placeholder', language)} className="h-10 rounded-lg bg-card" {...field} />
-                      </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="homeStationId"
-                render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>{t('settings.home.station', language)}</FormLabel>
-                      <FormControl>
-                        <StationSearch
-                          value={field.value}
-                          stationName={form.watch("homeStationName")}
-                          onChange={(id, name, location) => {
-                            field.onChange(id);
-                            form.setValue("homeStationName", name, { shouldValidate: true });
-                            form.setValue("homeStationLat", location?.latitude);
-                            form.setValue("homeStationLon", location?.longitude);
-                          }}
-                          placeholder={t('station.search.placeholder', language)}
-                        />
-                      </FormControl>
-                      <FormDescription>{t('settings.home.station.desc', language)}</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="homeLeavingBufferMinutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('settings.leaving.buffer', language)}</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="1" min="0" max="60" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
-                    </FormControl>
-                    <FormDescription className="text-xs">{t('settings.leaving.desc', language)}</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Work Settings Card */}
-          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MapPin className="w-4 h-4 text-muted-foreground" /> {t('settings.work', language)}
-              </CardTitle>
-              <CardDescription>{t('settings.work.desc', language)}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <FormField
-                control={form.control}
-                name="workAddress"
-                render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>{t('settings.work.address', language)}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('settings.work.address.placeholder', language)} className="h-10 rounded-lg bg-card" {...field} />
-                      </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="workStationId"
-                render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>{t('settings.work.station', language)}</FormLabel>
-                      <FormControl>
-                        <StationSearch
-                          value={field.value}
-                          stationName={form.watch("workStationName")}
-                          onChange={(id, name, location) => {
-                            field.onChange(id);
-                            form.setValue("workStationName", name, { shouldValidate: true });
-                            form.setValue("workStationLat", location?.latitude);
-                            form.setValue("workStationLon", location?.longitude);
-                          }}
-                          placeholder={t('station.search.placeholder', language)}
-                        />
-                      </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="workLeavingBufferMinutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('settings.leaving.buffer', language)}</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="1" min="0" max="60" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
-                    </FormControl>
-                    <FormDescription className="text-xs">{t('settings.leaving.desc', language)}</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Speed Profile */}
-          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Footprints className="w-4 h-4 text-muted-foreground" /> {t('settings.speed', language)}
-              </CardTitle>
-              <CardDescription>{t('settings.speed.desc', language)}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="walkBufferMinutes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('settings.walking.buffer', language)}</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="1" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
-                      </FormControl>
-                      <FormDescription className="text-xs">{t('settings.walking.buffer.desc', language)}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bikeBufferMinutes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('settings.biking.buffer', language)}</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="1" className="h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]" {...field} />
-                      </FormControl>
-                      <FormDescription className="text-xs">{t('settings.biking.buffer.desc', language)}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">{t('settings.station.mode', language)}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {(["stationModeFromHome", "stationModeFromWork"] as const).map((name) => (
-                    <FormField
-                      key={name}
-                      control={form.control}
-                      name={name}
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormLabel className="text-xs text-muted-foreground">
-                            {t(name === "stationModeFromHome" ? 'settings.station.mode.fromHome' : 'settings.station.mode.fromWork', language)}
-                          </FormLabel>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger className="h-10 rounded-lg bg-card">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="bike">{t('settings.station.mode.bike', language)}</SelectItem>
-                              <SelectItem value="walk">{t('settings.station.mode.walk', language)}</SelectItem>
-                              <SelectItem value="both">{t('settings.station.mode.both', language)}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">{t('settings.station.mode.desc', language)}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <SettingsSideSection side="home" form={form} language={language} />
+          <SettingsSideSection side="work" form={form} language={language} />
 
           {/* Train Preferences */}
           <Card className="bg-card border-border/70 shadow-sm rounded-xl">

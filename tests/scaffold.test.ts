@@ -24,16 +24,16 @@ describe('backend scaffold', () => {
   it('normalizes canonical buffer minute fields to second fields', () => {
     assert.deepEqual(
       {
-        bufferInsideHomeStationMin: normalizeBuffers({ bufferInsideHomeStation: 5, bufferPrepareBike: 2 }).bufferInsideHomeStationMin,
-        bufferPrepareBikeMin: normalizeBuffers({ bufferInsideHomeStation: 5, bufferPrepareBike: 2 }).bufferPrepareBikeMin,
-        bufferInsideHomeStationSec: normalizeBuffers({ bufferInsideHomeStation: 5, bufferPrepareBike: 2 }).bufferInsideHomeStationSec,
-        bufferPrepareBikeSec: normalizeBuffers({ bufferInsideHomeStation: 5, bufferPrepareBike: 2 }).bufferPrepareBikeSec
+        bufferBikeParkingHomeMin: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeParkingHomeMin,
+        bufferBikeWorkMin: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeWorkMin,
+        bufferBikeParkingHomeSec: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeParkingHomeSec,
+        bufferBikeWorkSec: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeWorkSec
       },
       {
-        bufferInsideHomeStationMin: 5,
-        bufferPrepareBikeMin: 2,
-        bufferInsideHomeStationSec: 300,
-        bufferPrepareBikeSec: 120
+        bufferBikeParkingHomeMin: 5,
+        bufferBikeWorkMin: 2,
+        bufferBikeParkingHomeSec: 300,
+        bufferBikeWorkSec: 120
       }
     );
   });
@@ -70,18 +70,20 @@ describe('backend scaffold', () => {
       routeWorkWalkSec: 540,
       routeWorkBikeSec: 230,
       ...normalizeBuffers({
-        bufferInsideHomeStation: 5,
-        bufferInsideWorkStation: 3,
         bufferLeaveHome: 4,
         bufferLeaveWork: 6,
-        bufferPrepareWalk: 1,
-        bufferPrepareBike: 2
+        bufferBikeHome: 2,
+        bufferBikeWork: 1,
+        bufferBikeParkingHome: 5,
+        bufferBikeParkingWork: 3
       })
     });
 
     assert.ok(journey.transportWork);
-    assert.equal(journey.homeAddressWalkTime, '2026-04-10T05:31:00.000Z');
-    assert.equal(journey.workAddressBikeTime, '2026-04-10T06:17:50.000Z');
+    // 05:52 - (660 s walk + 4 min leaving)
+    assert.equal(journey.homeAddressWalkTime, '2026-04-10T05:37:00.000Z');
+    // 06:11 + (230 s ride + 6 min leaving + 1 min bike + 3 min bike parking), applied on arrival as well
+    assert.equal(journey.workAddressBikeTime, '2026-04-10T06:24:50.000Z');
   });
 
   it('service placeholders return empty arrays through injectable clients', async () => {

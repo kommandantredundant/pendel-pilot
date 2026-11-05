@@ -12,7 +12,7 @@ class MemoryStorage implements KeyValueStorage {
   removeItem(key: string): void { this.values.delete(key); }
 }
 const profile: CommuteProfile = { id: 'default', name: 'My commute', homeAddress: { lat: 52.52, lon: 13.4 }, homeStation: { id: 'home', name: 'Home station', lat: 52.5, lon: 13.3 }, workStation: { id: 'work', name: 'Work station', lat: 52.6, lon: 13.4 }, workAddress: { lat: 52.61, lon: 13.41 }, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
-const bufferSettings: BufferSettings = { bufferInsideHomeStationMin: 5, bufferInsideWorkStationMin: 3, bufferLeaveHomeMin: 4, bufferLeaveWorkMin: 6, bufferPrepareWalkMin: 1, bufferPrepareBikeMin: 2 };
+const bufferSettings: BufferSettings = { bufferLeaveHomeMin: 4, bufferLeaveWorkMin: 6, bufferBikeHomeMin: 2, bufferBikeWorkMin: 1, bufferBikeParkingHomeMin: 5, bufferBikeParkingWorkMin: 3 };
 
 describe('local persistence', () => {
   it('saves and loads one commute and its buffer settings', () => {

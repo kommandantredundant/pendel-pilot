@@ -205,4 +205,78 @@ describe('journey options', () => {
     assert.ok(routedFrom.includes(`${chosen.lat},${chosen.lon}`));
     assert.equal(routedFrom.some((point) => point.startsWith('52.525,') || point.startsWith('52.5251,13.3699')), false);
   });
+
+  describe('fixed durations', () => {
+    const station = (value: typeof homeStation) => ({ id: value.id, name: value.name, lat: value.location.latitude, lon: value.location.longitude });
+    const transitClient: TransitClient = {
+      async searchStations() {
+        return [];
+      },
+      async calculateTransport() {
+        return null;
+      },
+      async calculateTransportOptions() {
+        return [
+          {
+            departureTime: '2026-04-10T07:52:00+02:00',
+            arrivalTime: '2026-04-10T08:11:00+02:00',
+            departureStation: station(homeStation),
+            arrivalStation: station(workStation)
+          }
+        ];
+      }
+    };
+    const routing = () => {
+      const requests: string[] = [];
+      const client: OsrmClient = {
+        async getRouteDuration(from, _to, profile) {
+          const side = from.lat === baseRequest.homeAddress.latitude ? 'home' : 'work';
+          requests.push(`${side}:${profile}`);
+          return { durationSec: 600 };
+        }
+      };
+      return { requests, client };
+    };
+
+    it('skips routing for a fixed side and mode and adds none of its buffers', async () => {
+      const { requests, client } = routing();
+      const result = await new JourneyCalculationService(transitClient, client).calculate({
+        ...baseRequest,
+        departureTime: '2026-04-10T07:50:00+02:00',
+        buffers: { bufferLeaveHome: 3, bufferBikeHome: 2, bufferBikeParkingHome: 4 },
+        fixedDurations: { homeWalkSec: 754 }
+      });
+      const journey = result.options[0].journey;
+
+      assert.deepEqual(requests.sort(), ['home:bike', 'work:bike', 'work:foot']);
+      assert.equal(journey.routeHomeWalkSec, 754);
+      assert.equal(journey.fixedHomeWalkSec, 754);
+      // 05:52 - 12:34
+      assert.equal(journey.homeAddressWalkTime, '2026-04-10T05:39:26.000Z');
+      // 05:52 - (600 s route + 3 + 2 + 4 min buffers)
+      assert.equal(journey.homeAddressBikeTime, '2026-04-10T05:33:00.000Z');
+    });
+
+    it('does not need the address of a side whose two modes are both fixed', async () => {
+      const { requests, client } = routing();
+      const { homeAddress: _omitted, ...withoutHomeAddress } = baseRequest;
+      const request = { ...withoutHomeAddress, departureTime: '2026-04-10T07:50:00+02:00', fixedDurations: { homeWalkSec: 600, homeBikeSec: 420 } };
+
+      const result = await new JourneyCalculationService(transitClient, client).calculate(request);
+
+      assert.deepEqual(requests.sort(), ['work:bike', 'work:foot']);
+      assert.equal(result.options[0].journey.homeAddress, undefined);
+      assert.equal(validateCalculateJourneyRequest({ ...request, fixedDurations: { homeWalkSec: 600 } }).success, false);
+    });
+
+    it('rejects fixed durations that are not whole seconds within three hours', () => {
+      const request = { ...baseRequest, departureTime: '2026-04-10T07:50:00+02:00' };
+      for (const homeWalkSec of [-1, 1.5, 3 * 60 * 60 + 1, '600']) {
+        const result = validateCalculateJourneyRequest({ ...request, fixedDurations: { homeWalkSec } });
+        assert.equal(result.success, false, `expected ${String(homeWalkSec)} to be rejected`);
+        assert.deepEqual(result.errors?.map((error) => error.field), ['fixedDurations.homeWalkSec']);
+      }
+      assert.equal(validateCalculateJourneyRequest({ ...request, fixedDurations: { workBikeSec: 0 } }).success, true);
+    });
+  });
 });

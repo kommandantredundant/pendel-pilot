@@ -43,12 +43,12 @@ export interface CommuteProfile {
 
 /** The six journey-calculation settings associated with the saved commute. */
 export interface BufferSettings {
-  bufferInsideHomeStationMin: number;
-  bufferInsideWorkStationMin: number;
   bufferLeaveHomeMin: number;
   bufferLeaveWorkMin: number;
-  bufferPrepareWalkMin: number;
-  bufferPrepareBikeMin: number;
+  bufferBikeHomeMin: number;
+  bufferBikeWorkMin: number;
+  bufferBikeParkingHomeMin: number;
+  bufferBikeParkingWorkMin: number;
 }
 
 export interface SavedCommute {

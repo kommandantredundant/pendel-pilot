@@ -6,12 +6,12 @@ import {
 } from '../models/localPersistence.ts';
 
 export const BUFFER_SETTINGS_FIELD_NAMES = [
-  'bufferInsideHomeStationMin',
-  'bufferInsideWorkStationMin',
   'bufferLeaveHomeMin',
   'bufferLeaveWorkMin',
-  'bufferPrepareWalkMin',
-  'bufferPrepareBikeMin'
+  'bufferBikeHomeMin',
+  'bufferBikeWorkMin',
+  'bufferBikeParkingHomeMin',
+  'bufferBikeParkingWorkMin'
 ] as const satisfies readonly (keyof BufferSettings)[];
 
 export type BufferSettingsFieldName = (typeof BUFFER_SETTINGS_FIELD_NAMES)[number];

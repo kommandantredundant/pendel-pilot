@@ -1,11 +1,20 @@
 import { z } from "zod";
 
+/** Longest fixed way between address and platform, in seconds (3 h, like the longest routed walk). */
+export const MAX_FIXED_SECONDS = 3 * 60 * 60;
+
+const bufferMinutes = z.number().int().min(0).max(60).default(0);
+const flag = z.number().int().min(0).max(1).default(0);
+const fixedSeconds = z.number().int().min(0).max(MAX_FIXED_SECONDS).optional();
+
 /**
- * Base settings schema with all fields
+ * Settings fields without cross-field rules. Home and work are different places, so every way-related value exists
+ * once per side and is never shared between them (docs/decisions.md).
  */
-export const settingsSchema = z.object({
+export const settingsObjectSchema = z.object({
   id: z.number().optional(),
-  homeAddress: z.string().min(1, "Home address is required"),
+  // Not needed (and not geocoded) while both modes of that side use a fixed time; kept so it is back when unticked.
+  homeAddress: z.string(),
   homeLat: z.number().optional(),
   homeLon: z.number().optional(),
   homeStationId: z.string().min(1, "Home station ID is required"),
@@ -13,17 +22,32 @@ export const settingsSchema = z.object({
   // Fixed start/end point for walk/bike routes; set when a station is picked in the search.
   homeStationLat: z.number().optional(),
   homeStationLon: z.number().optional(),
-  workAddress: z.string().min(1, "Work address is required"),
+  workAddress: z.string(),
   workLat: z.number().optional(),
   workLon: z.number().optional(),
   workStationId: z.string().min(1, "Work station ID is required"),
   workStationName: z.string().min(1, "Work station name is required"),
   workStationLat: z.number().optional(),
   workStationLon: z.number().optional(),
-  walkBufferMinutes: z.number().int().min(0).max(60).default(0),
-  bikeBufferMinutes: z.number().int().min(0).max(60).default(0),
-  homeLeavingBufferMinutes: z.number().int().min(0).max(60).default(0),
-  workLeavingBufferMinutes: z.number().int().min(0).max(60).default(0),
+  // Flat <-> front door (stairs, lift); walking and cycling, both directions.
+  homeLeavingBufferMinutes: bufferMinutes,
+  workLeavingBufferMinutes: bufferMinutes,
+  // Getting the bike out or putting it away; cycling only, both directions.
+  homeBikeBufferMinutes: bufferMinutes,
+  workBikeBufferMinutes: bufferMinutes,
+  // Bike parking at the station <-> platform; cycling only, both directions.
+  homeBikeParkingMinutes: bufferMinutes,
+  workBikeParkingMinutes: bufferMinutes,
+  // Fixed address <-> platform time per side and mode, replacing the route and that mode's buffers of that side.
+  // The seconds stay stored while the flag is off, so ticking it again brings the value back.
+  homeWalkFixed: flag,
+  homeWalkFixedSeconds: fixedSeconds,
+  homeBikeFixed: flag,
+  homeBikeFixedSeconds: fixedSeconds,
+  workWalkFixed: flag,
+  workWalkFixedSeconds: fixedSeconds,
+  workBikeFixed: flag,
+  workBikeFixedSeconds: fixedSeconds,
   excludeFernverkehr: z.number().int().min(0).max(1).default(0),
   // Glance: compact mobile view that replaces the dashboards with a "leave in N min" countdown.
   glanceMode: z.number().int().min(0).max(1).default(0),
@@ -43,12 +67,62 @@ export const settingsSchema = z.object({
   }).optional(),
 });
 
+export type Side = "home" | "work";
+export type SideMode = "walk" | "bike";
+
+type FixedFields = Pick<
+  z.infer<typeof settingsObjectSchema>,
+  | "homeWalkFixed" | "homeWalkFixedSeconds" | "homeBikeFixed" | "homeBikeFixedSeconds"
+  | "workWalkFixed" | "workWalkFixedSeconds" | "workBikeFixed" | "workBikeFixedSeconds"
+>;
+
+const FIXED_FIELDS = {
+  home: { walk: ["homeWalkFixed", "homeWalkFixedSeconds"], bike: ["homeBikeFixed", "homeBikeFixedSeconds"] },
+  work: { walk: ["workWalkFixed", "workWalkFixedSeconds"], bike: ["workBikeFixed", "workBikeFixedSeconds"] },
+} as const;
+
+/** The fixed time of one side and mode in seconds, or undefined while routing is used. */
+export function fixedSecondsOf(settings: Partial<FixedFields>, side: Side, mode: SideMode): number | undefined {
+  const [flagField, secondsField] = FIXED_FIELDS[side][mode];
+  return settings[flagField] === 1 ? settings[secondsField] : undefined;
+}
+
+/** A side needs its address (and its coordinates) unless both of its modes use a fixed time. */
+export function sideNeedsAddress(settings: Partial<FixedFields>, side: Side): boolean {
+  const [walkFlag] = FIXED_FIELDS[side].walk;
+  const [bikeFlag] = FIXED_FIELDS[side].bike;
+  return settings[walkFlag] !== 1 || settings[bikeFlag] !== 1;
+}
+
+/** Cross-field rules: an address while a side still routes, and a time for every ticked fixed time. */
+export function refineSettings(settings: Partial<z.infer<typeof settingsObjectSchema>>, ctx: z.RefinementCtx): void {
+  for (const side of ["home", "work"] as const) {
+    const addressField = side === "home" ? "homeAddress" : "workAddress";
+    if (sideNeedsAddress(settings, side) && !settings[addressField]?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [addressField], message: `${side === "home" ? "Home" : "Work"} address is required` });
+    }
+    for (const mode of ["walk", "bike"] as const) {
+      const [flagField, secondsField] = FIXED_FIELDS[side][mode];
+      if (settings[flagField] === 1 && settings[secondsField] === undefined) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [secondsField], message: "Fixed time is required (mm:ss)" });
+      }
+    }
+  }
+}
+
+export const settingsSchema = settingsObjectSchema.superRefine(refineSettings);
+
+/**
+ * Fields of the settings persisted in localStorage, without the cross-field rules (for extending in forms)
+ */
+export const insertSettingsObjectSchema = settingsObjectSchema.omit({
+  id: true,
+});
+
 /**
  * Schema for settings persisted in localStorage
  */
-export const insertSettingsSchema = settingsSchema.omit({
-  id: true,
-});
+export const insertSettingsSchema = insertSettingsObjectSchema.superRefine(refineSettings);
 
 /**
  * Schema for selecting settings (includes all fields)

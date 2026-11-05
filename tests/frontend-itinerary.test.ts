@@ -89,8 +89,8 @@ function validProfile(overrides: Partial<CommuteProfile> = {}): CommuteProfile {
 
 function validPreset(overrides: Partial<BufferSettings> = {}): BufferSettings {
   return {
-    bufferInsideHomeStationMin: 5, bufferInsideWorkStationMin: 3, bufferLeaveHomeMin: 4,
-    bufferLeaveWorkMin: 6, bufferPrepareWalkMin: 1, bufferPrepareBikeMin: 2, ...overrides
+    bufferLeaveHomeMin: 4, bufferLeaveWorkMin: 6, bufferBikeHomeMin: 2,
+    bufferBikeWorkMin: 1, bufferBikeParkingHomeMin: 5, bufferBikeParkingWorkMin: 3, ...overrides
   };
 }
 
@@ -153,8 +153,8 @@ describe('frontend settings profile flow', () => {
     assert.deepEqual(page.bufferFields.map((field) => field.name), [...BUFFER_SETTINGS_FIELD_NAMES]);
     assert.equal(page.html.includes('homeAddress: Home'), true);
     assert.equal(page.html.includes('homeStation: 8002549 Berlin Südkreuz'), true);
-    assert.equal(page.html.includes('bufferInsideHomeStationMin'), true);
-    assert.equal(page.html.includes('bufferPrepareBikeMin'), true);
+    assert.equal(page.html.includes('bufferBikeParkingHomeMin'), true);
+    assert.equal(page.html.includes('bufferBikeHomeMin'), true);
   });
 
   it('edits buffer values while preserving canonical buffer field names', () => {
@@ -168,27 +168,27 @@ describe('frontend settings profile flow', () => {
 
   it('validates invalid or missing canonical settings fields', () => {
     const invalidProfile = { ...validProfile(), homeAddress: { label: 'Missing coordinates' } } as Record<string, unknown>;
-    const invalidPreset = { ...validPreset(), bufferPrepareBike: 2 } as Record<string, unknown>;
-    delete invalidPreset.bufferPrepareBikeMin;
+    const invalidPreset = { ...validPreset(), bufferBikeHome: 2 } as Record<string, unknown>;
+    delete invalidPreset.bufferBikeHomeMin;
 
     const page = renderSettingsPage({ profile: invalidProfile, bufferSettings: invalidPreset });
 
     assert.equal(page.state, 'settings-validation-failure');
     assert.ok(page.validationErrors.some((error) => error.includes('profile.homeAddress.lat')));
-    assert.ok(page.validationErrors.some((error) => error.includes('bufferSettings.bufferPrepareBikeMin')));
-    assert.equal(page.html.includes('bufferPrepareBike:'), false);
+    assert.ok(page.validationErrors.some((error) => error.includes('bufferSettings.bufferBikeHomeMin')));
+    assert.equal(page.html.includes('bufferBikeHome:'), false);
   });
 
   it('writes and reads one commute and its buffer settings through local persistence helpers', () => {
     const store = new DailyJourneyLocalStore(new MemoryStorage());
-    const editedPreset = editBufferSettingsValue(validPreset(), 'bufferInsideWorkStationMin', 7);
+    const editedPreset = editBufferSettingsValue(validPreset(), 'bufferBikeParkingWorkMin', 7);
 
     writeCommuteSettings(store, { profile: validProfile(), bufferSettings: editedPreset });
     const settings = readCommuteSettings(store);
     const page = renderSettingsPage({ profile: settings.profile, bufferSettings: settings.bufferSettings });
 
     assert.equal(settings.profile?.homeAddress.label, 'Home');
-    assert.equal(settings.bufferSettings?.bufferInsideWorkStationMin, 7);
+    assert.equal(settings.bufferSettings?.bufferBikeParkingWorkMin, 7);
     assert.equal(page.state, 'settings-ready');
     assert.equal(page.html.includes('value="7"'), true);
   });
@@ -496,11 +496,11 @@ describe('frontend itinerary pages from golden fixtures', () => {
     assert.ok(delayedPage.badges.includes('Delay present'));
     assert.ok(delayedPage.badges.includes('Segment y delay'));
     assert.ok(delayedPage.html.includes('Delay present on segment y (transportWork).'));
-    assert.ok(delayedPage.html.includes('Recommended start time homeAddressWalkTime: 2026-04-10T05:36:00.000Z'));
+    assert.ok(delayedPage.html.includes('Recommended start time homeAddressWalkTime: 2026-04-10T05:42:00.000Z'));
     assert.ok(delayedPage.html.includes('shifted by segment y delay; anchored to homeStationTime 2026-04-10T05:57:00.000Z'));
     assert.equal(onTimePage.html.includes('Recommended start time homeAddressWalkTime'), false);
-    assert.equal(onTimePage.html.includes('2026-04-10T05:31:00.000Z'), true);
-    assert.equal(delayedPage.html.includes('2026-04-10T05:36:00.000Z'), true);
+    assert.equal(onTimePage.html.includes('2026-04-10T05:37:00.000Z'), true);
+    assert.equal(delayedPage.html.includes('2026-04-10T05:42:00.000Z'), true);
   });
 
 });

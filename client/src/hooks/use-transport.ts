@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { CommuteSuggestion, Station } from "@shared/routes";
+import { fixedSecondsOf, sideNeedsAddress, type InsertSettings } from "@shared/client-schema";
 import { loadSettings } from "@/lib/settings-storage";
 import { ErrorFactory, isAppError } from "@/lib/app-error";
 import { apiGet, apiPost } from "@/lib/api-client";
@@ -177,6 +178,28 @@ function stationLocation(field: string, latitude: number | undefined, longitude:
   return latitude !== undefined && longitude !== undefined ? { [field]: { latitude, longitude } } : {};
 }
 
+/**
+ * Coordinates of one side's address for the request: undefined when that side is not routed (both modes fixed),
+ * null when it is routed but the address has not been located yet.
+ */
+function addressCoordinates(settings: InsertSettings, side: "home" | "work") {
+  if (!sideNeedsAddress(settings, side)) return undefined;
+  const [latitude, longitude] = side === "home" ? [settings.homeLat, settings.homeLon] : [settings.workLat, settings.workLon];
+  return latitude !== undefined && longitude !== undefined ? { latitude, longitude } : null;
+}
+
+/** Fixed address <-> platform times, per side and mode; omitted when every way is routed. */
+function fixedDurations(settings: InsertSettings) {
+  const durations = {
+    homeWalkSec: fixedSecondsOf(settings, "home", "walk"),
+    homeBikeSec: fixedSecondsOf(settings, "home", "bike"),
+    workWalkSec: fixedSecondsOf(settings, "work", "walk"),
+    workBikeSec: fixedSecondsOf(settings, "work", "bike"),
+  };
+  const set = Object.fromEntries(Object.entries(durations).filter(([, seconds]) => seconds !== undefined));
+  return Object.keys(set).length > 0 ? { fixedDurations: set } : {};
+}
+
 /** Time anchor for a journey search: now, or a fixed departure/arrival instant (ISO 8601). */
 export type JourneyAnchor = { kind: "now" } | { kind: "departure" | "arrival"; time: string };
 
@@ -213,7 +236,9 @@ export async function fetchJourneysAt(
     throw ErrorFactory.transportStationsNotSet();
   }
 
-  if (settings.homeLat === undefined || settings.homeLon === undefined || settings.workLat === undefined || settings.workLon === undefined) {
+  const homeAddress = addressCoordinates(settings, "home");
+  const workAddress = addressCoordinates(settings, "work");
+  if (homeAddress === null || workAddress === null) {
     throw ErrorFactory.settingsNotConfigured(new Error("Addresses have not been located yet"));
   }
 
@@ -228,8 +253,8 @@ export async function fetchJourneysAt(
       {
         homeStationId: settings.homeStationId,
         workStationId: settings.workStationId,
-        homeAddress: { latitude: settings.homeLat, longitude: settings.homeLon },
-        workAddress: { latitude: settings.workLat, longitude: settings.workLon },
+        ...(homeAddress ? { homeAddress } : {}),
+        ...(workAddress ? { workAddress } : {}),
         ...stationLocation("homeStationLocation", settings.homeStationLat, settings.homeStationLon),
         ...stationLocation("workStationLocation", settings.workStationLat, settings.workStationLon),
         direction: destination,
@@ -239,9 +264,12 @@ export async function fetchJourneysAt(
         buffers: {
           bufferLeaveHome: settings.homeLeavingBufferMinutes,
           bufferLeaveWork: settings.workLeavingBufferMinutes,
-          bufferPrepareWalk: settings.walkBufferMinutes,
-          bufferPrepareBike: settings.bikeBufferMinutes,
+          bufferBikeHome: settings.homeBikeBufferMinutes,
+          bufferBikeWork: settings.workBikeBufferMinutes,
+          bufferBikeParkingHome: settings.homeBikeParkingMinutes,
+          bufferBikeParkingWork: settings.workBikeParkingMinutes,
         },
+        ...fixedDurations(settings),
       },
       "transport"
     );

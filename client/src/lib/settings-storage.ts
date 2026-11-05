@@ -26,10 +26,27 @@ export function loadSettings(): InsertSettings | null {
 
   try {
     const parsed = JSON.parse(raw);
-    return insertSettingsSchema.parse(parsed);
+    return insertSettingsSchema.parse(migrateSettings(parsed));
   } catch {
     return null;
   }
+}
+
+/**
+ * Bring settings stored by older versions up to date.
+ * - November 2026: the shared bike buffer became one bike buffer per side; both sides start from the old value
+ *   once and are independent from then on. The shared walking buffer is gone (the leaving buffer of each side
+ *   covers it) and is dropped.
+ */
+export function migrateSettings(stored: unknown): unknown {
+  if (typeof stored !== "object" || stored === null || Array.isArray(stored)) return stored;
+  const { walkBufferMinutes: _walk, bikeBufferMinutes, ...rest } = stored as Record<string, unknown>;
+  if (bikeBufferMinutes === undefined) return rest;
+  return {
+    homeBikeBufferMinutes: bikeBufferMinutes,
+    workBikeBufferMinutes: bikeBufferMinutes,
+    ...rest,
+  };
 }
 
 export function saveSettings(input: InsertSettings): InsertSettings {
