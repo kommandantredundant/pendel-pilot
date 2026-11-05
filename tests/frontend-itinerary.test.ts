@@ -34,7 +34,6 @@ import { ITINERARY_TELEMETRY_VERSION } from '../src/telemetry/itineraryTelemetry
 import { PROVIDER_POLICIES } from '../src/clients/providerCompliance.ts';
 import {
   CANONICAL_ADDRESS_TIME_FIELDS,
-  CANONICAL_BUFFER_MIN_FIELDS,
   CANONICAL_BUFFER_SEC_FIELDS,
   CANONICAL_ROUTE_DURATION_FIELDS,
   CANONICAL_STATION_ANCHOR_FIELDS,
@@ -89,8 +88,8 @@ function validProfile(overrides: Partial<CommuteProfile> = {}): CommuteProfile {
 
 function validPreset(overrides: Partial<BufferSettings> = {}): BufferSettings {
   return {
-    bufferLeaveHomeMin: 4, bufferLeaveWorkMin: 6, bufferBikeHomeMin: 2,
-    bufferBikeWorkMin: 1, bufferBikeParkingHomeMin: 5, bufferBikeParkingWorkMin: 3, ...overrides
+    bufferLeaveHomeSec: 240, bufferLeaveWorkSec: 360, bufferBikeHomeSec: 120,
+    bufferBikeWorkSec: 60, bufferBikeParkingHomeSec: 300, bufferBikeParkingWorkSec: 180, ...overrides
   };
 }
 
@@ -114,7 +113,6 @@ const CANONICAL_COMPLETE_JOURNEY_FIELDS = [
   'workAddress',
   ...CANONICAL_STATION_ANCHOR_FIELDS,
   ...CANONICAL_ROUTE_DURATION_FIELDS,
-  ...CANONICAL_BUFFER_MIN_FIELDS,
   ...CANONICAL_BUFFER_SEC_FIELDS,
   ...CANONICAL_ADDRESS_TIME_FIELDS
 ] as const;
@@ -153,42 +151,42 @@ describe('frontend settings profile flow', () => {
     assert.deepEqual(page.bufferFields.map((field) => field.name), [...BUFFER_SETTINGS_FIELD_NAMES]);
     assert.equal(page.html.includes('homeAddress: Home'), true);
     assert.equal(page.html.includes('homeStation: 8002549 Berlin Südkreuz'), true);
-    assert.equal(page.html.includes('bufferBikeParkingHomeMin'), true);
-    assert.equal(page.html.includes('bufferBikeHomeMin'), true);
+    assert.equal(page.html.includes('bufferBikeParkingHomeSec'), true);
+    assert.equal(page.html.includes('bufferBikeHomeSec'), true);
   });
 
   it('edits buffer values while preserving canonical buffer field names', () => {
-    const edited = editBufferSettingsValue(validPreset(), 'bufferLeaveHomeMin', 9);
+    const edited = editBufferSettingsValue(validPreset(), 'bufferLeaveHomeSec', 9);
     const page = renderSettingsPage({ profile: validProfile(), bufferSettings: edited });
 
-    assert.equal(edited.bufferLeaveHomeMin, 9);
-    assert.equal(page.html.includes('name="bufferLeaveHomeMin" type="number" value="9"'), true);
-    assert.deepEqual(page.bufferFields.find((field) => field.name === 'bufferLeaveHomeMin'), { name: 'bufferLeaveHomeMin', value: 9 });
+    assert.equal(edited.bufferLeaveHomeSec, 9);
+    assert.equal(page.html.includes('name="bufferLeaveHomeSec" type="number" value="9"'), true);
+    assert.deepEqual(page.bufferFields.find((field) => field.name === 'bufferLeaveHomeSec'), { name: 'bufferLeaveHomeSec', value: 9 });
   });
 
   it('validates invalid or missing canonical settings fields', () => {
     const invalidProfile = { ...validProfile(), homeAddress: { label: 'Missing coordinates' } } as Record<string, unknown>;
-    const invalidPreset = { ...validPreset(), bufferBikeHome: 2 } as Record<string, unknown>;
-    delete invalidPreset.bufferBikeHomeMin;
+    const invalidPreset = { ...validPreset(), bufferBikeHomeMin: 2 } as Record<string, unknown>;
+    delete invalidPreset.bufferBikeHomeSec;
 
     const page = renderSettingsPage({ profile: invalidProfile, bufferSettings: invalidPreset });
 
     assert.equal(page.state, 'settings-validation-failure');
     assert.ok(page.validationErrors.some((error) => error.includes('profile.homeAddress.lat')));
-    assert.ok(page.validationErrors.some((error) => error.includes('bufferSettings.bufferBikeHomeMin')));
-    assert.equal(page.html.includes('bufferBikeHome:'), false);
+    assert.ok(page.validationErrors.some((error) => error.includes('bufferSettings.bufferBikeHomeSec')));
+    assert.equal(page.html.includes('bufferBikeHomeMin:'), false);
   });
 
   it('writes and reads one commute and its buffer settings through local persistence helpers', () => {
     const store = new DailyJourneyLocalStore(new MemoryStorage());
-    const editedPreset = editBufferSettingsValue(validPreset(), 'bufferBikeParkingWorkMin', 7);
+    const editedPreset = editBufferSettingsValue(validPreset(), 'bufferBikeParkingWorkSec', 7);
 
     writeCommuteSettings(store, { profile: validProfile(), bufferSettings: editedPreset });
     const settings = readCommuteSettings(store);
     const page = renderSettingsPage({ profile: settings.profile, bufferSettings: settings.bufferSettings });
 
     assert.equal(settings.profile?.homeAddress.label, 'Home');
-    assert.equal(settings.bufferSettings?.bufferBikeParkingWorkMin, 7);
+    assert.equal(settings.bufferSettings?.bufferBikeParkingWorkSec, 7);
     assert.equal(page.state, 'settings-ready');
     assert.equal(page.html.includes('value="7"'), true);
   });

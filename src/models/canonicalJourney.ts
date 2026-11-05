@@ -23,17 +23,9 @@ export interface CanonicalStation extends CanonicalPoint {
  * - leave: flat <-> front door (stairs, lift); walking and cycling.
  * - bike: getting the bike out or putting it away; cycling only.
  * - bikeParking: bike parking at the station <-> platform; cycling only.
+ * Like every duration in the model, buffers are whole seconds (see docs/decisions.md).
  */
-export interface CanonicalBuffersMin {
-  bufferLeaveHomeMin: number;
-  bufferLeaveWorkMin: number;
-  bufferBikeHomeMin: number;
-  bufferBikeWorkMin: number;
-  bufferBikeParkingHomeMin: number;
-  bufferBikeParkingWorkMin: number;
-}
-
-export interface CanonicalBuffersSec {
+export interface CanonicalBuffers {
   bufferLeaveHomeSec: number;
   bufferLeaveWorkSec: number;
   bufferBikeHomeSec: number;
@@ -42,16 +34,11 @@ export interface CanonicalBuffersSec {
   bufferBikeParkingWorkSec: number;
 }
 
-export type CanonicalBuffers = CanonicalBuffersMin & CanonicalBuffersSec;
+/** Buffers in a calculation request use the canonical names; a missing buffer is 0. */
+export type InputBuffers = Partial<CanonicalBuffers>;
 
-export interface InputBuffers {
-  bufferLeaveHome?: number;
-  bufferLeaveWork?: number;
-  bufferBikeHome?: number;
-  bufferBikeWork?: number;
-  bufferBikeParkingHome?: number;
-  bufferBikeParkingWork?: number;
-}
+/** Upper bound of a buffer (1 h). */
+export const MAX_BUFFER_SEC = 60 * 60;
 
 /**
  * Durations the user knows better than routing: the whole way between address and platform for one side and one
@@ -148,15 +135,6 @@ export interface ValidationResult<T> {
   errors?: ValidationErrorDetail[];
 }
 
-export const CANONICAL_BUFFER_MIN_FIELDS = [
-  'bufferLeaveHomeMin',
-  'bufferLeaveWorkMin',
-  'bufferBikeHomeMin',
-  'bufferBikeWorkMin',
-  'bufferBikeParkingHomeMin',
-  'bufferBikeParkingWorkMin'
-] as const;
-
 export const CANONICAL_BUFFER_SEC_FIELDS = [
   'bufferLeaveHomeSec',
   'bufferLeaveWorkSec',
@@ -184,25 +162,16 @@ export const CANONICAL_ADDRESS_TIME_FIELDS = [
   'workAddressBikeTime'
 ] as const;
 
-const DEFAULT_BUFFER_MINUTES: Required<InputBuffers> = {
-  bufferLeaveHome: 0,
-  bufferLeaveWork: 0,
-  bufferBikeHome: 0,
-  bufferBikeWork: 0,
-  bufferBikeParkingHome: 0,
-  bufferBikeParkingWork: 0
+const DEFAULT_BUFFERS: CanonicalBuffers = {
+  bufferLeaveHomeSec: 0,
+  bufferLeaveWorkSec: 0,
+  bufferBikeHomeSec: 0,
+  bufferBikeWorkSec: 0,
+  bufferBikeParkingHomeSec: 0,
+  bufferBikeParkingWorkSec: 0
 };
 
 const FIXED_DURATION_KEYS = ['homeWalkSec', 'homeBikeSec', 'workWalkSec', 'workBikeSec'] as const satisfies readonly (keyof FixedDurations)[];
-
-const BUFFER_MIN_TO_SEC_FIELD: Record<keyof CanonicalBuffersMin, keyof CanonicalBuffersSec> = {
-  bufferLeaveHomeMin: 'bufferLeaveHomeSec',
-  bufferLeaveWorkMin: 'bufferLeaveWorkSec',
-  bufferBikeHomeMin: 'bufferBikeHomeSec',
-  bufferBikeWorkMin: 'bufferBikeWorkSec',
-  bufferBikeParkingHomeMin: 'bufferBikeParkingHomeSec',
-  bufferBikeParkingWorkMin: 'bufferBikeParkingWorkSec'
-};
 
 const NON_CANONICAL_SYNONYM_KEYS = new Set([
   'HomeStationTime',
@@ -221,7 +190,13 @@ const NON_CANONICAL_SYNONYM_KEYS = new Set([
   'BufferBikeWork',
   'BufferBikeParkingHome',
   'BufferBikeParkingWork',
-  // Replaced in November 2026 by per-side buffers; rejected so stale payloads cannot pass as canonical.
+  // Replaced in November 2026 by per-side buffers in whole seconds; rejected so stale payloads cannot pass as canonical.
+  'bufferLeaveHomeMin',
+  'bufferLeaveWorkMin',
+  'bufferBikeHomeMin',
+  'bufferBikeWorkMin',
+  'bufferBikeParkingHomeMin',
+  'bufferBikeParkingWorkMin',
   'bufferInsideHomeStationMin',
   'bufferInsideHomeStationSec',
   'bufferInsideWorkStationMin',
@@ -244,28 +219,8 @@ export function apiDirectionToCanonical(direction: ApiDirection): CanonicalDirec
   return direction === 'work' ? 'journeyWork' : 'journeyHome';
 }
 
-/** Buffers enter as minutes and may carry seconds as a fraction (0.75 = 45 s); calculations use whole seconds. */
-export function bufferMinutesToSeconds(minutes: number): number {
-  return Math.round(minutes * 60);
-}
-
 export function normalizeBuffers(buffers: InputBuffers = {}): CanonicalBuffers {
-  const merged = { ...DEFAULT_BUFFER_MINUTES, ...buffers };
-
-  return {
-    bufferLeaveHomeMin: merged.bufferLeaveHome,
-    bufferLeaveWorkMin: merged.bufferLeaveWork,
-    bufferBikeHomeMin: merged.bufferBikeHome,
-    bufferBikeWorkMin: merged.bufferBikeWork,
-    bufferBikeParkingHomeMin: merged.bufferBikeParkingHome,
-    bufferBikeParkingWorkMin: merged.bufferBikeParkingWork,
-    bufferLeaveHomeSec: bufferMinutesToSeconds(merged.bufferLeaveHome),
-    bufferLeaveWorkSec: bufferMinutesToSeconds(merged.bufferLeaveWork),
-    bufferBikeHomeSec: bufferMinutesToSeconds(merged.bufferBikeHome),
-    bufferBikeWorkSec: bufferMinutesToSeconds(merged.bufferBikeWork),
-    bufferBikeParkingHomeSec: bufferMinutesToSeconds(merged.bufferBikeParkingHome),
-    bufferBikeParkingWorkSec: bufferMinutesToSeconds(merged.bufferBikeParkingWork)
-  };
+  return { ...DEFAULT_BUFFERS, ...buffers };
 }
 
 /** Seconds between the home address and the home station for one mode: the fixed duration, or route plus buffers. */
@@ -403,10 +358,6 @@ function validateCanonicalJourneyShape(input: unknown, requireCalculatedTimes: b
     requireNonNegativeInteger(input, field, errors);
   }
 
-  for (const field of CANONICAL_BUFFER_MIN_FIELDS) {
-    requireNonNegativeNumber(input, field, errors);
-  }
-
   for (const field of CANONICAL_BUFFER_SEC_FIELDS) {
     requireNonNegativeInteger(input, field, errors);
   }
@@ -415,7 +366,6 @@ function validateCanonicalJourneyShape(input: unknown, requireCalculatedTimes: b
     requireOptionalNonNegativeInteger(input, field, errors);
   }
 
-  validateDerivedBufferSeconds(input, errors);
   validateDirectionTransport(input, errors);
 
   if (requireCalculatedTimes) {
@@ -479,17 +429,6 @@ function validateTransportTiming(value: unknown, field: string, errors: Validati
   validateDelayStatus(value, errors, field);
 }
 
-function validateDerivedBufferSeconds(input: Record<string, unknown>, errors: ValidationErrorDetail[]): void {
-  for (const minField of CANONICAL_BUFFER_MIN_FIELDS) {
-    const secField = BUFFER_MIN_TO_SEC_FIELD[minField];
-    const minValue = input[minField];
-    const secValue = input[secField];
-    if (typeof minValue === 'number' && typeof secValue === 'number' && secValue !== bufferMinutesToSeconds(minValue)) {
-      errors.push({ field: secField, message: `${secField} must equal ${minField} * 60, rounded to whole seconds.` });
-    }
-  }
-}
-
 function validateNoNonCanonicalSynonyms(input: unknown, errors: ValidationErrorDetail[], path = ''): void {
   if (!isRecord(input)) {
     return;
@@ -529,13 +468,6 @@ function requireOptionalIsoDateTime(body: Record<string, unknown>, field: string
     return;
   }
   requireIsoDateTime(body, field, errors, prefix);
-}
-
-function requireNonNegativeNumber(body: Record<string, unknown>, field: string, errors: ValidationErrorDetail[]): void {
-  const value = body[field];
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-    errors.push({ field, message: `${field} must be a non-negative finite number.` });
-  }
 }
 
 function requireNonNegativeInteger(body: Record<string, unknown>, field: string, errors: ValidationErrorDetail[]): void {
@@ -627,10 +559,15 @@ function validateInputBuffers(value: unknown, errors: ValidationErrorDetail[]): 
     return;
   }
 
-  for (const key of Object.keys(DEFAULT_BUFFER_MINUTES)) {
+  for (const key of CANONICAL_BUFFER_SEC_FIELDS) {
     const candidate = value[key];
-    if (candidate !== undefined && (typeof candidate !== 'number' || !Number.isFinite(candidate) || candidate < 0)) {
-      errors.push({ field: `buffers.${key}`, message: `${key} must be a non-negative number of minutes.` });
+    if (candidate !== undefined && (typeof candidate !== 'number' || !Number.isInteger(candidate) || candidate < 0 || candidate > MAX_BUFFER_SEC)) {
+      errors.push({ field: `buffers.${key}`, message: `${key} must be an integer number of seconds from 0 to ${MAX_BUFFER_SEC}.` });
+    }
+  }
+  for (const key of Object.keys(value)) {
+    if (!(CANONICAL_BUFFER_SEC_FIELDS as readonly string[]).includes(key)) {
+      errors.push({ field: `buffers.${key}`, message: `${key} is not a buffer; buffers are ${CANONICAL_BUFFER_SEC_FIELDS.join(', ')}.` });
     }
   }
 }

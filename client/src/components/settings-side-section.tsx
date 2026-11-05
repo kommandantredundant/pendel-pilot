@@ -190,7 +190,9 @@ function BufferField({
               onBlur={field.onBlur}
               disabled={disabled}
               max={MAX_BUFFER_SECONDS}
-              // Buffers have a default of 0, which the form would show for an empty value; NaN keeps the entry and fails validation.
+              // An empty buffer is no buffer: 0 shows as an empty field with the grey "mm:ss" hint.
+              emptyMeansZero
+              // The form would show the default 0 for an undefined value; NaN keeps the entry and fails validation.
               invalidValue={Number.NaN}
             />
           </FormControl>
@@ -268,13 +270,17 @@ function FixedTimeField({
   );
 }
 
-/** Text input for mm:ss that reports seconds, or `invalidValue` while the text is not a valid duration up to `max`. */
+/**
+ * Text input for mm:ss. The only place durations are minutes and seconds: it reports whole seconds to the form, or
+ * `invalidValue` while the text is not a valid duration up to `max`. The empty field shows a grey "mm:ss" hint.
+ */
 function MinutesSecondsInput({
   value,
   onChange,
   onBlur,
   disabled,
   max,
+  emptyMeansZero = false,
   invalidValue,
 }: {
   value: number | undefined;
@@ -282,14 +288,19 @@ function MinutesSecondsInput({
   onBlur: () => void;
   disabled: boolean;
   max: number;
+  /** Empty text stands for 0 seconds, and 0 is shown as an empty field. */
+  emptyMeansZero?: boolean;
   invalidValue?: number;
 }) {
-  const [text, setText] = useState(value === undefined ? "" : formatMinutesSeconds(value));
+  const format = (seconds: number | undefined) =>
+    seconds === undefined || (emptyMeansZero && seconds === 0) ? "" : formatMinutesSeconds(seconds);
+  const parse = (input: string) => (emptyMeansZero && input.trim() === "" ? 0 : parseMinutesSeconds(input, max));
+  const [text, setText] = useState(format(value));
 
   // Follow outside changes (loading saved settings) without overwriting what is being typed.
   useEffect(() => {
     if (value !== undefined && Number.isNaN(value)) return;
-    if (value !== parseMinutesSeconds(text, max)) setText(value === undefined ? "" : formatMinutesSeconds(value));
+    if (value !== parse(text)) setText(format(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
@@ -302,11 +313,11 @@ function MinutesSecondsInput({
       disabled={disabled}
       onChange={(event) => {
         setText(event.target.value);
-        onChange(parseMinutesSeconds(event.target.value, max) ?? invalidValue);
+        onChange(parse(event.target.value) ?? invalidValue);
       }}
       onBlur={() => {
-        const parsed = parseMinutesSeconds(text, max);
-        if (parsed !== undefined) setText(formatMinutesSeconds(parsed));
+        const parsed = parse(text);
+        if (parsed !== undefined) setText(format(parsed));
         onBlur();
       }}
     />

@@ -7,11 +7,11 @@
   "departureTime": "2026-04-10T07:52:00+02:00",
   "arrivalTime": "2026-04-10T08:11:00+02:00",
   "buffers": {
-    "bufferBikeParkingHome": 5,
-    "bufferBikeParkingWork": 3,
-    "bufferLeaveHome": 4,
-    "bufferLeaveWork": 6,
-    "bufferBikeHome": 2,
-    "bufferBikeWork": 2
+    "bufferBikeParkingHomeSec": 300,
+    "bufferBikeParkingWorkSec": 180,
+    "bufferLeaveHomeSec": 240,
+    "bufferLeaveWorkSec": 360,
+    "bufferBikeHomeSec": 120,
+    "bufferBikeWorkSec": 120
   }
 }

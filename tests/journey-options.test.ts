@@ -243,7 +243,7 @@ describe('journey options', () => {
       const result = await new JourneyCalculationService(transitClient, client).calculate({
         ...baseRequest,
         departureTime: '2026-04-10T07:50:00+02:00',
-        buffers: { bufferLeaveHome: 3, bufferBikeHome: 2, bufferBikeParkingHome: 4 },
+        buffers: { bufferLeaveHomeSec: 180, bufferBikeHomeSec: 120, bufferBikeParkingHomeSec: 240 },
         fixedDurations: { homeWalkSec: 754 }
       });
       const journey = result.options[0].journey;

@@ -21,21 +21,15 @@ describe('backend scaffold', () => {
     assert.match(buildRouteUrl({ lat: 52.52, lon: 13.405 }, { lat: 52.5, lon: 13.4 }, 'bike').pathname, /^\/routed-bike\//);
   });
 
-  it('normalizes canonical buffer minute fields to second fields', () => {
-    assert.deepEqual(
-      {
-        bufferBikeParkingHomeMin: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeParkingHomeMin,
-        bufferBikeWorkMin: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeWorkMin,
-        bufferBikeParkingHomeSec: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeParkingHomeSec,
-        bufferBikeWorkSec: normalizeBuffers({ bufferBikeParkingHome: 5, bufferBikeWork: 2 }).bufferBikeWorkSec
-      },
-      {
-        bufferBikeParkingHomeMin: 5,
-        bufferBikeWorkMin: 2,
-        bufferBikeParkingHomeSec: 300,
-        bufferBikeWorkSec: 120
-      }
-    );
+  it('fills missing buffers with 0 seconds', () => {
+    assert.deepEqual(normalizeBuffers({ bufferBikeParkingHomeSec: 300, bufferBikeWorkSec: 120 }), {
+      bufferLeaveHomeSec: 0,
+      bufferLeaveWorkSec: 0,
+      bufferBikeHomeSec: 0,
+      bufferBikeWorkSec: 120,
+      bufferBikeParkingHomeSec: 300,
+      bufferBikeParkingWorkSec: 0
+    });
   });
 
   it('validates canonical journey calculation request shape', () => {
@@ -70,12 +64,12 @@ describe('backend scaffold', () => {
       routeWorkWalkSec: 540,
       routeWorkBikeSec: 230,
       ...normalizeBuffers({
-        bufferLeaveHome: 4,
-        bufferLeaveWork: 6,
-        bufferBikeHome: 2,
-        bufferBikeWork: 1,
-        bufferBikeParkingHome: 5,
-        bufferBikeParkingWork: 3
+        bufferLeaveHomeSec: 240,
+        bufferLeaveWorkSec: 360,
+        bufferBikeHomeSec: 120,
+        bufferBikeWorkSec: 60,
+        bufferBikeParkingHomeSec: 300,
+        bufferBikeParkingWorkSec: 180
       })
     });
 

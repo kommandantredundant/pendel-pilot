@@ -1,6 +1,6 @@
 import {
   CANONICAL_ADDRESS_TIME_FIELDS,
-  CANONICAL_BUFFER_MIN_FIELDS,
+  CANONICAL_BUFFER_SEC_FIELDS,
   CANONICAL_ROUTE_DURATION_FIELDS,
   CANONICAL_STATION_ANCHOR_FIELDS,
   type CanonicalDirection,
@@ -13,7 +13,8 @@ import {
 } from './canonicalJourney.ts';
 
 /** The only browser state retained between visits. */
-export const LOCAL_STORAGE_VERSION = 3;
+// v4 (November 2026): buffer settings are per side and in whole seconds.
+export const LOCAL_STORAGE_VERSION = 4;
 export const LOCAL_STORAGE_PREFIX = `dailyjourney.v${LOCAL_STORAGE_VERSION}`;
 export const LOCAL_STORAGE_KEYS = {
   commute: `${LOCAL_STORAGE_PREFIX}.commute`,
@@ -43,12 +44,12 @@ export interface CommuteProfile {
 
 /** The six journey-calculation settings associated with the saved commute. */
 export interface BufferSettings {
-  bufferLeaveHomeMin: number;
-  bufferLeaveWorkMin: number;
-  bufferBikeHomeMin: number;
-  bufferBikeWorkMin: number;
-  bufferBikeParkingHomeMin: number;
-  bufferBikeParkingWorkMin: number;
+  bufferLeaveHomeSec: number;
+  bufferLeaveWorkSec: number;
+  bufferBikeHomeSec: number;
+  bufferBikeWorkSec: number;
+  bufferBikeParkingHomeSec: number;
+  bufferBikeParkingWorkSec: number;
 }
 
 export interface SavedCommute {
@@ -83,7 +84,7 @@ export function validateCommuteProfile(input: unknown): ValidationResult<Commute
 export function validateBufferSettings(input: unknown): ValidationResult<BufferSettings> {
   const errors: ValidationErrorDetail[] = [];
   if (!isRecord(input)) return { success: false, errors: [{ field: 'bufferSettings', message: 'bufferSettings must be an object.' }] };
-  for (const field of CANONICAL_BUFFER_MIN_FIELDS) requireNonNegativeNumber(input, field, errors);
+  for (const field of CANONICAL_BUFFER_SEC_FIELDS) requireNonNegativeInteger(input, field, errors);
   return result(input, errors);
 }
 
@@ -157,8 +158,8 @@ function requireString(input: Record<string, unknown>, field: string, errors: Va
 function requireIsoDateTime(input: Record<string, unknown>, field: string, errors: ValidationErrorDetail[]): void {
   if (typeof input[field] !== 'string' || Number.isNaN(Date.parse(input[field] as string))) errors.push({ field, message: `${field} must be an ISO 8601 datetime.` });
 }
-function requireNonNegativeNumber(input: Record<string, unknown>, field: string, errors: ValidationErrorDetail[]): void {
-  if (typeof input[field] !== 'number' || !Number.isFinite(input[field]) || (input[field] as number) < 0) errors.push({ field, message: `${field} must be a non-negative finite number.` });
+function requireNonNegativeInteger(input: Record<string, unknown>, field: string, errors: ValidationErrorDetail[]): void {
+  if (typeof input[field] !== 'number' || !Number.isInteger(input[field]) || (input[field] as number) < 0) errors.push({ field, message: `${field} must be a non-negative integer number of seconds.` });
 }
 function validateAddress(input: unknown, field: string, errors: ValidationErrorDetail[]): void {
   validatePoint(input, field, errors);

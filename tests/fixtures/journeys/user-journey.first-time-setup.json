@@ -22,12 +22,6 @@
       "id": "preset-first-time",
       "profileId": "profile-first-time",
       "name": "Default buffers",
-      "bufferBikeParkingHomeMin": 5,
-      "bufferBikeParkingWorkMin": 3,
-      "bufferLeaveHomeMin": 4,
-      "bufferLeaveWorkMin": 6,
-      "bufferBikeHomeMin": 2,
-      "bufferBikeWorkMin": 2,
       "createdAt": "2026-04-10T05:00:00.000Z",
       "updatedAt": "2026-04-10T05:00:00.000Z"
     },

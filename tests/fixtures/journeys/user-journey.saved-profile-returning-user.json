@@ -17,12 +17,6 @@
       "id": "preset-returning",
       "profileId": "profile-returning",
       "name": "Returning buffers",
-      "bufferBikeParkingHomeMin": 5,
-      "bufferBikeParkingWorkMin": 7,
-      "bufferLeaveHomeMin": 4,
-      "bufferLeaveWorkMin": 6,
-      "bufferBikeHomeMin": 2,
-      "bufferBikeWorkMin": 2,
       "createdAt": "2026-04-09T18:00:00.000Z",
       "updatedAt": "2026-04-10T05:20:00.000Z"
     },
