@@ -244,6 +244,11 @@ export function apiDirectionToCanonical(direction: ApiDirection): CanonicalDirec
   return direction === 'work' ? 'journeyWork' : 'journeyHome';
 }
 
+/** Buffers enter as minutes and may carry seconds as a fraction (0.75 = 45 s); calculations use whole seconds. */
+export function bufferMinutesToSeconds(minutes: number): number {
+  return Math.round(minutes * 60);
+}
+
 export function normalizeBuffers(buffers: InputBuffers = {}): CanonicalBuffers {
   const merged = { ...DEFAULT_BUFFER_MINUTES, ...buffers };
 
@@ -254,12 +259,12 @@ export function normalizeBuffers(buffers: InputBuffers = {}): CanonicalBuffers {
     bufferBikeWorkMin: merged.bufferBikeWork,
     bufferBikeParkingHomeMin: merged.bufferBikeParkingHome,
     bufferBikeParkingWorkMin: merged.bufferBikeParkingWork,
-    bufferLeaveHomeSec: merged.bufferLeaveHome * 60,
-    bufferLeaveWorkSec: merged.bufferLeaveWork * 60,
-    bufferBikeHomeSec: merged.bufferBikeHome * 60,
-    bufferBikeWorkSec: merged.bufferBikeWork * 60,
-    bufferBikeParkingHomeSec: merged.bufferBikeParkingHome * 60,
-    bufferBikeParkingWorkSec: merged.bufferBikeParkingWork * 60
+    bufferLeaveHomeSec: bufferMinutesToSeconds(merged.bufferLeaveHome),
+    bufferLeaveWorkSec: bufferMinutesToSeconds(merged.bufferLeaveWork),
+    bufferBikeHomeSec: bufferMinutesToSeconds(merged.bufferBikeHome),
+    bufferBikeWorkSec: bufferMinutesToSeconds(merged.bufferBikeWork),
+    bufferBikeParkingHomeSec: bufferMinutesToSeconds(merged.bufferBikeParkingHome),
+    bufferBikeParkingWorkSec: bufferMinutesToSeconds(merged.bufferBikeParkingWork)
   };
 }
 
@@ -479,8 +484,8 @@ function validateDerivedBufferSeconds(input: Record<string, unknown>, errors: Va
     const secField = BUFFER_MIN_TO_SEC_FIELD[minField];
     const minValue = input[minField];
     const secValue = input[secField];
-    if (typeof minValue === 'number' && typeof secValue === 'number' && secValue !== minValue * 60) {
-      errors.push({ field: secField, message: `${secField} must equal ${minField} * 60.` });
+    if (typeof minValue === 'number' && typeof secValue === 'number' && secValue !== bufferMinutesToSeconds(minValue)) {
+      errors.push({ field: secField, message: `${secField} must equal ${minField} * 60, rounded to whole seconds.` });
     }
   }
 }

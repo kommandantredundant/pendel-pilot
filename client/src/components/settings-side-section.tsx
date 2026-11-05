@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatMinutesSeconds, parseMinutesSeconds } from "@/lib/duration";
 import { t, type Language } from "@/lib/i18n";
+import { MAX_BUFFER_SECONDS, MAX_FIXED_SECONDS } from "@shared/client-schema";
 import { SIDE_FIELDS, type SettingsFormValues } from "@/lib/settings-form";
 
 const NUMBER_INPUT = "h-10 w-full rounded-lg bg-card font-mono-numbers max-w-[8rem]";
@@ -127,12 +128,12 @@ export function SettingsSideSection({
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-border/70 pt-4">
           {/* Tinted tile: the leaving buffer applies to both modes. */}
           <div className="self-start rounded-lg bg-muted/70 p-3">
-            <MinutesField form={form} name={fields.leaving} label="settings.leaving.buffer" description="settings.leaving.desc" disabled={notRouted} language={language} />
+            <BufferField form={form} name={fields.leaving} label="settings.leaving.buffer" description="settings.leaving.desc" disabled={notRouted} language={language} />
           </div>
           <div className="space-y-4">
             <ModeHeading mode="bike" language={language} />
-            <MinutesField form={form} name={fields.bike} label="settings.biking.buffer" description="settings.biking.buffer.desc" disabled={bikeFixed} language={language} />
-            <MinutesField form={form} name={fields.bikeParking} label="settings.bikeParking.buffer" description="settings.bikeParking.buffer.desc" disabled={bikeFixed} language={language} />
+            <BufferField form={form} name={fields.bike} label="settings.biking.buffer" description="settings.biking.buffer.desc" disabled={bikeFixed} language={language} />
+            <BufferField form={form} name={fields.bikeParking} label="settings.bikeParking.buffer" description="settings.bikeParking.buffer.desc" disabled={bikeFixed} language={language} />
           </div>
           <div className="space-y-3">
             <ModeHeading mode="walk" language={language} />
@@ -158,9 +159,9 @@ function ModeHeading({ mode, language, hidden = false }: { mode: "walk" | "bike"
   );
 }
 
-type MinutesFieldName = (typeof SIDE_FIELDS)["home" | "work"]["leaving" | "bike" | "bikeParking"];
+type BufferFieldName = (typeof SIDE_FIELDS)["home" | "work"]["leaving" | "bike" | "bikeParking"];
 
-function MinutesField({
+function BufferField({
   form,
   name,
   label,
@@ -169,7 +170,7 @@ function MinutesField({
   language,
 }: {
   form: UseFormReturn<SettingsFormValues>;
-  name: MinutesFieldName;
+  name: BufferFieldName;
   label: string;
   description: string;
   disabled: boolean;
@@ -179,13 +180,23 @@ function MinutesField({
     <FormField
       control={form.control}
       name={name}
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <LabelWithHelp label={t(label, language)} help={t(description, language)} language={language} />
           <FormControl>
-            <Input type="number" step="1" min="0" max="60" className={NUMBER_INPUT} {...field} disabled={disabled} />
+            <MinutesSecondsInput
+              value={typeof field.value === "number" ? field.value : undefined}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              disabled={disabled}
+              max={MAX_BUFFER_SECONDS}
+              // Buffers have a default of 0, which the form would show for an empty value; NaN keeps the entry and fails validation.
+              invalidValue={Number.NaN}
+            />
           </FormControl>
-          <FormMessage />
+          {fieldState.error && !disabled && (
+            <p className="text-sm font-medium text-destructive">{t("settings.buffer.invalid", language)}</p>
+          )}
         </FormItem>
       )}
     />
@@ -244,6 +255,7 @@ function FixedTimeField({
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 disabled={!enabled}
+                max={MAX_FIXED_SECONDS}
               />
             </FormControl>
             {fieldState.error && enabled && (
@@ -256,39 +268,44 @@ function FixedTimeField({
   );
 }
 
-/** Text input for mm:ss that reports seconds, or undefined while the text is not a valid duration. */
+/** Text input for mm:ss that reports seconds, or `invalidValue` while the text is not a valid duration up to `max`. */
 function MinutesSecondsInput({
   value,
   onChange,
   onBlur,
   disabled,
+  max,
+  invalidValue,
 }: {
   value: number | undefined;
   onChange: (seconds: number | undefined) => void;
   onBlur: () => void;
   disabled: boolean;
+  max: number;
+  invalidValue?: number;
 }) {
   const [text, setText] = useState(value === undefined ? "" : formatMinutesSeconds(value));
 
   // Follow outside changes (loading saved settings) without overwriting what is being typed.
   useEffect(() => {
-    if (value !== parseMinutesSeconds(text)) setText(value === undefined ? "" : formatMinutesSeconds(value));
+    if (value !== undefined && Number.isNaN(value)) return;
+    if (value !== parseMinutesSeconds(text, max)) setText(value === undefined ? "" : formatMinutesSeconds(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   return (
     <Input
-      inputMode="numeric"
+      inputMode="decimal"
       placeholder="mm:ss"
       className={NUMBER_INPUT}
       value={text}
       disabled={disabled}
       onChange={(event) => {
         setText(event.target.value);
-        onChange(parseMinutesSeconds(event.target.value));
+        onChange(parseMinutesSeconds(event.target.value, max) ?? invalidValue);
       }}
       onBlur={() => {
-        const parsed = parseMinutesSeconds(text);
+        const parsed = parseMinutesSeconds(text, max);
         if (parsed !== undefined) setText(formatMinutesSeconds(parsed));
         onBlur();
       }}

@@ -3,7 +3,10 @@ import { z } from "zod";
 /** Longest fixed way between address and platform, in seconds (3 h, like the longest routed walk). */
 export const MAX_FIXED_SECONDS = 3 * 60 * 60;
 
-const bufferMinutes = z.number().int().min(0).max(60).default(0);
+/** Longest buffer, in seconds (60 min). */
+export const MAX_BUFFER_SECONDS = 60 * 60;
+
+const bufferSeconds = z.number().int().min(0).max(MAX_BUFFER_SECONDS).default(0);
 const flag = z.number().int().min(0).max(1).default(0);
 const fixedSeconds = z.number().int().min(0).max(MAX_FIXED_SECONDS).optional();
 
@@ -30,14 +33,14 @@ export const settingsObjectSchema = z.object({
   workStationLat: z.number().optional(),
   workStationLon: z.number().optional(),
   // Flat <-> front door (stairs, lift); walking and cycling, both directions.
-  homeLeavingBufferMinutes: bufferMinutes,
-  workLeavingBufferMinutes: bufferMinutes,
+  homeLeavingBufferSeconds: bufferSeconds,
+  workLeavingBufferSeconds: bufferSeconds,
   // Getting the bike out or putting it away; cycling only, both directions.
-  homeBikeBufferMinutes: bufferMinutes,
-  workBikeBufferMinutes: bufferMinutes,
+  homeBikeBufferSeconds: bufferSeconds,
+  workBikeBufferSeconds: bufferSeconds,
   // Bike parking at the station <-> platform; cycling only, both directions.
-  homeBikeParkingMinutes: bufferMinutes,
-  workBikeParkingMinutes: bufferMinutes,
+  homeBikeParkingSeconds: bufferSeconds,
+  workBikeParkingSeconds: bufferSeconds,
   // Fixed address <-> platform time per side and mode, replacing the route and that mode's buffers of that side.
   // The seconds stay stored while the flag is off, so ticking it again brings the value back.
   homeWalkFixed: flag,

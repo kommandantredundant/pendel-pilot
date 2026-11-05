@@ -13,12 +13,12 @@ const sampleSettings = {
   homeLon: 13.369,
   workLat: 52.521,
   workLon: 13.411,
-  homeLeavingBufferMinutes: 2,
-  workLeavingBufferMinutes: 1,
-  homeBikeBufferMinutes: 3,
-  workBikeBufferMinutes: 0,
-  homeBikeParkingMinutes: 2,
-  workBikeParkingMinutes: 4,
+  homeLeavingBufferSeconds: 120,
+  workLeavingBufferSeconds: 45,
+  homeBikeBufferSeconds: 180,
+  workBikeBufferSeconds: 0,
+  homeBikeParkingSeconds: 90,
+  workBikeParkingSeconds: 240,
   homeWalkFixed: 1,
   homeWalkFixedSeconds: 754,
   homeBikeFixed: 0,
@@ -70,22 +70,37 @@ test("saveSettings + loadSettings roundtrip", () => {
   assert.deepEqual(loaded, sampleSettings);
 });
 
-test("the shared bike buffer of older profiles becomes the starting value of both sides; the walking buffer is dropped", () => {
+test("older profiles: the shared bike buffer starts both sides, the walking buffer is dropped, minutes become seconds", () => {
   const {
-    homeBikeBufferMinutes: _home,
-    workBikeBufferMinutes: _work,
+    homeLeavingBufferSeconds: _homeLeaving,
+    workLeavingBufferSeconds: _workLeaving,
+    homeBikeBufferSeconds: _homeBike,
+    workBikeBufferSeconds: _workBike,
+    homeBikeParkingSeconds: _homeParking,
+    workBikeParkingSeconds: _workParking,
     ...current
   } = sampleSettings;
   localStorageStub.setItem(
     "pendelpilot.settings.v1",
-    JSON.stringify({ ...current, walkBufferMinutes: 5, bikeBufferMinutes: 3 })
+    JSON.stringify({
+      ...current,
+      walkBufferMinutes: 5,
+      bikeBufferMinutes: 3,
+      homeLeavingBufferMinutes: 2,
+      workLeavingBufferMinutes: 1,
+      workBikeParkingMinutes: 4,
+    })
   );
   const loaded = loadSettings() as Record<string, unknown> | null;
-  assert.equal(loaded?.homeBikeBufferMinutes, 3);
-  assert.equal(loaded?.workBikeBufferMinutes, 3);
-  assert.equal(loaded?.homeBikeParkingMinutes, 2);
-  assert.equal("walkBufferMinutes" in (loaded ?? {}), false);
-  assert.equal("bikeBufferMinutes" in (loaded ?? {}), false);
+  assert.equal(loaded?.homeLeavingBufferSeconds, 120);
+  assert.equal(loaded?.workLeavingBufferSeconds, 60);
+  assert.equal(loaded?.homeBikeBufferSeconds, 180);
+  assert.equal(loaded?.workBikeBufferSeconds, 180);
+  assert.equal(loaded?.homeBikeParkingSeconds, 0);
+  assert.equal(loaded?.workBikeParkingSeconds, 240);
+  for (const gone of ["walkBufferMinutes", "bikeBufferMinutes", "homeLeavingBufferMinutes", "workBikeParkingMinutes"]) {
+    assert.equal(gone in (loaded ?? {}), false, gone);
+  }
 });
 
 test("an address may stay empty only while both modes of its side use a fixed time", () => {

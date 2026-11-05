@@ -1,17 +1,19 @@
 import { z } from "zod";
-import { insertSettingsObjectSchema, refineSettings } from "@shared/client-schema";
+import { insertSettingsObjectSchema, MAX_BUFFER_SECONDS, refineSettings } from "@shared/client-schema";
 
-const minutes = z.coerce.number().min(0).max(60);
+// No default here: an unreadable mm:ss entry arrives as undefined and must block saving instead of becoming 0.
+const bufferSeconds = z.number().int().min(0).max(MAX_BUFFER_SECONDS);
 
-/** The settings form: the stored settings, with numeric inputs coerced from their text values. */
+
+/** The settings form: the stored settings, with numeric inputs coerced from their text values (buffers and fixed times are mm:ss inputs that report seconds). */
 export const settingsFormSchema = insertSettingsObjectSchema
   .extend({
-    homeLeavingBufferMinutes: minutes,
-    workLeavingBufferMinutes: minutes,
-    homeBikeBufferMinutes: minutes,
-    workBikeBufferMinutes: minutes,
-    homeBikeParkingMinutes: minutes,
-    workBikeParkingMinutes: minutes,
+    homeLeavingBufferSeconds: bufferSeconds,
+    workLeavingBufferSeconds: bufferSeconds,
+    homeBikeBufferSeconds: bufferSeconds,
+    workBikeBufferSeconds: bufferSeconds,
+    homeBikeParkingSeconds: bufferSeconds,
+    workBikeParkingSeconds: bufferSeconds,
     excludeFernverkehr: z.coerce.number().min(0).max(1),
     glanceMode: z.coerce.number().min(0).max(1),
     planMode: z.coerce.number().min(0).max(1),
@@ -32,9 +34,9 @@ export const SIDE_FIELDS = {
     stationLat: "homeStationLat",
     stationLon: "homeStationLon",
     stationMode: "stationModeFromHome",
-    leaving: "homeLeavingBufferMinutes",
-    bike: "homeBikeBufferMinutes",
-    bikeParking: "homeBikeParkingMinutes",
+    leaving: "homeLeavingBufferSeconds",
+    bike: "homeBikeBufferSeconds",
+    bikeParking: "homeBikeParkingSeconds",
     walkFixed: "homeWalkFixed",
     walkFixedSeconds: "homeWalkFixedSeconds",
     bikeFixed: "homeBikeFixed",
@@ -47,9 +49,9 @@ export const SIDE_FIELDS = {
     stationLat: "workStationLat",
     stationLon: "workStationLon",
     stationMode: "stationModeFromWork",
-    leaving: "workLeavingBufferMinutes",
-    bike: "workBikeBufferMinutes",
-    bikeParking: "workBikeParkingMinutes",
+    leaving: "workLeavingBufferSeconds",
+    bike: "workBikeBufferSeconds",
+    bikeParking: "workBikeParkingSeconds",
     walkFixed: "workWalkFixed",
     walkFixedSeconds: "workWalkFixedSeconds",
     bikeFixed: "workBikeFixed",

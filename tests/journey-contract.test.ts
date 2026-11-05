@@ -555,6 +555,17 @@ describe('canonical journey calculation core', () => {
     });
   });
 
+  it('takes buffer minutes with a fraction and calculates in whole seconds', () => {
+    const buffers = normalizeBuffers({ bufferLeaveHome: 0.75, bufferBikeParkingWork: 1.5, bufferBikeHome: 2 / 60 });
+
+    assert.equal(buffers.bufferLeaveHomeSec, 45);
+    assert.equal(buffers.bufferBikeParkingWorkSec, 90);
+    assert.equal(buffers.bufferBikeHomeSec, 2);
+    assert.equal(validateCanonicalJourneySeed(workSeed(buffers)).success, true);
+    // 05:52 - (660 s route + 45 s leaving)
+    assert.equal(calculateJourneyWork(workSeed(buffers)).homeAddressWalkTime, '2026-04-10T05:40:15.000Z');
+  });
+
   it('keeps the two sides apart: a buffer of one side never moves the times of the other side', () => {
     const baseline = calculateJourneyWork(workSeed());
     const moreHomeBuffers = calculateJourneyWork(

@@ -14,12 +14,12 @@ const sampleSettings = {
   homeLon: 13.369,
   workLat: 52.521,
   workLon: 13.411,
-  homeLeavingBufferMinutes: 2,
-  workLeavingBufferMinutes: 1,
-  homeBikeBufferMinutes: 3,
-  workBikeBufferMinutes: 0,
-  homeBikeParkingMinutes: 4,
-  workBikeParkingMinutes: 2,
+  homeLeavingBufferSeconds: 120,
+  workLeavingBufferSeconds: 45,
+  homeBikeBufferSeconds: 180,
+  workBikeBufferSeconds: 0,
+  homeBikeParkingSeconds: 240,
+  workBikeParkingSeconds: 90,
   excludeFernverkehr: 0,
   language: "de",
 };
@@ -81,13 +81,14 @@ test("fetchJourneys posts the saved profile to /api/journeys/calculate and maps 
   assert.deepEqual(request?.body.workStationLocation, { latitude: 52.5219, longitude: 13.4132 });
   assert.equal(request?.body.homeStationLocation, undefined);
   assert.equal(request?.body.excludeLongDistance, true);
+  // Stored in seconds, sent in minutes; seconds become a fraction.
   assert.deepEqual(request?.body.buffers, {
     bufferLeaveHome: 2,
-    bufferLeaveWork: 1,
+    bufferLeaveWork: 0.75,
     bufferBikeHome: 3,
     bufferBikeWork: 0,
     bufferBikeParkingHome: 4,
-    bufferBikeParkingWork: 2,
+    bufferBikeParkingWork: 1.5,
   });
   assert.equal(request?.body.fixedDurations, undefined);
   assert.ok(request?.body.departureTime);
