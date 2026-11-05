@@ -33,8 +33,10 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top Navigation Bar */}
-      <nav className="border-b border-border/70 sticky top-0 bg-card/95 backdrop-blur z-10">
-        <div className={cn("flex items-center px-4 md:px-8 py-3 mx-auto w-full", width)}>
+      {/* Safe-area padding keeps the header clear of the camera cutout and rounded corners
+          when the browser draws edge-to-edge (immersive / viewport-fit=cover). */}
+      <nav className="border-b border-border/70 sticky top-0 bg-card/95 backdrop-blur z-10 pt-safe-top">
+        <div className={cn("flex items-center px-safe-4 md:px-safe-8 py-3 mx-auto w-full", width)}>
           <div className="flex items-center gap-3">
             <TrainIcon className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">
@@ -60,7 +62,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content Area */}
       {/* Planner fits the screen above the bottom navigation, so it needs less padding on top. */}
-      <main className={cn("flex-1 w-full mx-auto", wide ? "px-8 pt-5 pb-32" : "p-4 md:p-8 pb-[calc(var(--bottom-nav-space)+1.5rem)] md:pb-[calc(var(--bottom-nav-space)+1.5rem)]", width)}>
+      <main className={cn("flex-1 w-full mx-auto", wide ? "px-safe-8 pt-5 pb-32" : "p-4 px-safe-4 md:p-8 md:px-safe-8 pb-[calc(var(--bottom-nav-space)+1.5rem)] md:pb-[calc(var(--bottom-nav-space)+1.5rem)]", width)}>
         <ErrorBoundary>
           <motion.div
             key={location}
