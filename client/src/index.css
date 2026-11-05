@@ -6,6 +6,8 @@
 
 @layer base {
   :root {
+    /* Overwritten at runtime by BottomNav with its measured height. */
+    --bottom-nav-space: 5.5rem;
     --font-sans: 'Inter', sans-serif;
     /* Times, lines and track numbers: a wide technical mono that reads like a departure board */
     --font-mono: 'Martian Mono', ui-monospace, monospace;

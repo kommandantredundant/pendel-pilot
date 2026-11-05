@@ -23,6 +23,30 @@ export function BottomNav() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const baselineHeight = useRef(window.innerHeight);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Publish how much of the viewport bottom the nav covers (incl. safe area and the floating
+  // offset on desktop), so sticky elements and the page padding can sit right above it.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const root = document.documentElement;
+    const update = () => {
+      const space = Math.max(0, Math.round(window.innerHeight - nav.getBoundingClientRect().top));
+      root.style.setProperty("--bottom-nav-space", `${space}px`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(nav);
+    window.addEventListener("resize", update);
+    nav.addEventListener("transitionend", update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+      nav.removeEventListener("transitionend", update);
+      root.style.removeProperty("--bottom-nav-space");
+    };
+  }, []);
 
   // Detect virtual keyboard visibility
   useEffect(() => {
@@ -81,13 +105,13 @@ export function BottomNav() {
 
   return (
     <nav
+      ref={navRef}
       className={`
         fixed bottom-0 left-0 right-0 z-50
         backdrop-blur-lg bg-card/95
         border-t border-border/70
         transition-transform duration-300 ease-in-out
         ${isKeyboardVisible ? "translate-y-full" : "translate-y-0"}
-        pb-safe-area-inset-bottom
         md:bottom-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-auto md:min-w-[400px]
         md:rounded-2xl md:border md:shadow-lg
       `}
@@ -95,7 +119,8 @@ export function BottomNav() {
       aria-label="Main navigation"
       data-bottom-nav
     >
-      <div className="flex items-center justify-around px-2 py-2 md:py-3">
+      {/* Bottom padding grows into the safe area (gesture bar / home indicator) instead of adding to it. */}
+      <div className="flex items-center justify-around px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] md:py-3">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
           const Icon = item.icon;
@@ -106,7 +131,7 @@ export function BottomNav() {
               href={getHref(item.path)}
               className={`
                 flex flex-col items-center justify-center
-                min-w-[64px] px-3 py-2 rounded-xl
+                min-w-[64px] px-3 py-1.5 md:py-2 rounded-xl
                 transition-all duration-200 ease-in-out
                 ${isActive
                   ? "text-primary bg-primary/10"

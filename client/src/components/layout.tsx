@@ -60,7 +60,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content Area */}
       {/* Planner fits the screen above the bottom navigation, so it needs less padding on top. */}
-      <main className={cn("flex-1 w-full mx-auto", wide ? "px-8 pt-5 pb-32" : "p-4 md:p-8 pb-24 md:pb-32", width)}>
+      <main className={cn("flex-1 w-full mx-auto", wide ? "px-8 pt-5 pb-32" : "p-4 md:p-8 pb-[calc(var(--bottom-nav-space)+1.5rem)] md:pb-[calc(var(--bottom-nav-space)+1.5rem)]", width)}>
         <ErrorBoundary>
           <motion.div
             key={location}
