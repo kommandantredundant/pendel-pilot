@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { Bike, Footprints, MapPin } from "lucide-react";
+import { HelpHint } from "@/components/help-hint";
 import { StationSearch } from "@/components/station-search";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,7 +12,17 @@ import { formatMinutesSeconds, parseMinutesSeconds } from "@/lib/duration";
 import { t, type Language } from "@/lib/i18n";
 import { SIDE_FIELDS, type SettingsFormValues } from "@/lib/settings-form";
 
-const NUMBER_INPUT = "h-10 rounded-lg bg-card font-mono-numbers max-w-[8rem]";
+const NUMBER_INPUT = "h-10 w-full rounded-lg bg-card font-mono-numbers max-w-[8rem]";
+
+/** A form label followed by its (?) explanation. */
+function LabelWithHelp({ label, help, language }: { label: string; help: string; language: Language }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <FormLabel>{label}</FormLabel>
+      <HelpHint text={help} language={language} />
+    </div>
+  );
+}
 
 /**
  * Everything about one end of the commute: address, station, how you get there, and the buffers and fixed times of
@@ -66,7 +77,11 @@ export function SettingsSideSection({
           name={fields.stationId}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t(`settings.${side}.station`, language)}</FormLabel>
+              {side === "home" ? (
+                <LabelWithHelp label={t("settings.home.station", language)} help={t("settings.home.station.desc", language)} language={language} />
+              ) : (
+                <FormLabel>{t("settings.work.station", language)}</FormLabel>
+              )}
               <FormControl>
                 <StationSearch
                   value={String(field.value ?? "")}
@@ -80,7 +95,6 @@ export function SettingsSideSection({
                   placeholder={t("station.search.placeholder", language)}
                 />
               </FormControl>
-              {side === "home" && <FormDescription>{t("settings.home.station.desc", language)}</FormDescription>}
               <FormMessage />
             </FormItem>
           )}
@@ -90,7 +104,7 @@ export function SettingsSideSection({
           name={fields.stationMode}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("settings.station.mode", language)}</FormLabel>
+              <LabelWithHelp label={t("settings.station.mode", language)} help={t("settings.station.mode.desc", language)} language={language} />
               <Select value={String(field.value)} onValueChange={field.onChange}>
                 <FormControl>
                   <SelectTrigger className="h-10 rounded-lg bg-card">
@@ -103,28 +117,31 @@ export function SettingsSideSection({
                   <SelectItem value="both">{t("settings.station.mode.both", language)}</SelectItem>
                 </SelectContent>
               </Select>
-              <FormDescription className="text-xs">{t("settings.station.mode.desc", language)}</FormDescription>
             </FormItem>
           )}
         />
-        <MinutesField form={form} name={fields.leaving} label="settings.leaving.buffer" description="settings.leaving.desc" disabled={notRouted} language={language} />
-
-        <div className="space-y-4 border-t border-border/70 pt-4">
-          <p className="flex items-center gap-2 text-sm font-medium">
-            <Footprints className="w-4 h-4 text-muted-foreground" /> {t("settings.side.walk", language)}
-          </p>
-          <FixedTimeField form={form} flag={fields.walkFixed} seconds={fields.walkFixedSeconds} description="settings.fixed.walk.desc" language={language} />
-        </div>
-
-        <div className="space-y-4 border-t border-border/70 pt-4">
-          <p className="flex items-center gap-2 text-sm font-medium">
-            <Bike className="w-4 h-4 text-muted-foreground" /> {t("settings.side.bike", language)}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Left: what counts on foot (leaving buffer, walking). Right: what counts by bike only. */}
+        <div className="grid grid-cols-2 gap-4 border-t border-border/70 pt-4">
+          <div className="space-y-4">
+            {/* Tinted tile: the leaving buffer applies to both modes. */}
+            <div className="rounded-lg bg-muted/70 p-3">
+              <MinutesField form={form} name={fields.leaving} label="settings.leaving.buffer" description="settings.leaving.desc" disabled={notRouted} language={language} />
+            </div>
+            <div className="space-y-3">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <Footprints className="w-4 h-4 text-muted-foreground" /> {t("settings.side.walk", language)}
+              </p>
+              <FixedTimeField form={form} flag={fields.walkFixed} seconds={fields.walkFixedSeconds} description="settings.fixed.walk.desc" language={language} />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Bike className="w-4 h-4 text-muted-foreground" /> {t("settings.side.bike", language)}
+            </p>
             <MinutesField form={form} name={fields.bike} label="settings.biking.buffer" description="settings.biking.buffer.desc" disabled={bikeFixed} language={language} />
             <MinutesField form={form} name={fields.bikeParking} label="settings.bikeParking.buffer" description="settings.bikeParking.buffer.desc" disabled={bikeFixed} language={language} />
+            <FixedTimeField form={form} flag={fields.bikeFixed} seconds={fields.bikeFixedSeconds} description="settings.fixed.bike.desc" language={language} />
           </div>
-          <FixedTimeField form={form} flag={fields.bikeFixed} seconds={fields.bikeFixedSeconds} description="settings.fixed.bike.desc" language={language} />
         </div>
       </CardContent>
     </Card>
@@ -154,11 +171,10 @@ function MinutesField({
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{t(label, language)}</FormLabel>
+          <LabelWithHelp label={t(label, language)} help={t(description, language)} language={language} />
           <FormControl>
             <Input type="number" step="1" min="0" max="60" className={NUMBER_INPUT} {...field} disabled={disabled} />
           </FormControl>
-          <FormDescription className="text-xs">{t(description, language)}</FormDescription>
           <FormMessage />
         </FormItem>
       )}
@@ -191,7 +207,7 @@ function FixedTimeField({
         control={form.control}
         name={flag}
         render={({ field }) => (
-          <FormItem className="flex items-center gap-3 space-y-0">
+          <FormItem className="flex items-center gap-2 space-y-0">
             <FormControl>
               <Checkbox
                 checked={field.value === 1}
@@ -202,7 +218,8 @@ function FixedTimeField({
                 }}
               />
             </FormControl>
-            <FormLabel className="cursor-pointer font-medium">{t("settings.fixed.enable", language)}</FormLabel>
+            <FormLabel className="cursor-pointer font-medium leading-snug">{t("settings.fixed.enable", language)}</FormLabel>
+            <HelpHint text={t(description, language)} language={language} />
           </FormItem>
         )}
       />
@@ -219,7 +236,6 @@ function FixedTimeField({
                 disabled={!enabled}
               />
             </FormControl>
-            <FormDescription className="text-xs">{t(description, language)}</FormDescription>
             {fieldState.error && enabled && (
               <p className="text-sm font-medium text-destructive">{t("settings.fixed.invalid", language)}</p>
             )}
