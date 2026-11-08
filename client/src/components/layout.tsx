@@ -10,6 +10,7 @@ import { useActiveView } from "@/hooks/use-active-view";
 import { BottomNav } from "@/components/bottom-nav";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { TrainIcon } from "@/components/train-icon";
+import { InsetDebug } from "@/components/inset-debug";
 
 export function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -82,6 +83,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Bottom Navigation */}
       <BottomNav />
+      <InsetDebug />
     </div>
   );
 }
