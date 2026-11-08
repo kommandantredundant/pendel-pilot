@@ -120,7 +120,7 @@ export function BottomNav() {
       data-bottom-nav
     >
       {/* Bottom padding grows into the safe area (gesture bar / home indicator) instead of adding to it. */}
-      <div className="flex items-center justify-around px-[max(0.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] md:py-3">
+      <div className="flex items-center justify-around px-[max(0.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pt-1 pb-safe-nav md:py-3">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
           const Icon = item.icon;
