@@ -1,13 +1,34 @@
 import { useEffect, useState } from "react";
 
+const TOGGLE_EVENT = "pendelpilot:toggle-inset-debug";
+let taps: number[] = [];
+
+/** Five quick taps (within 2 s) toggle the overlay; works in the installed app, which has no address bar. */
+export function registerInsetDebugTap() {
+  const now = Date.now();
+  taps = [...taps.filter((t) => now - t < 2000), now];
+  if (taps.length >= 5) {
+    taps = [];
+    window.dispatchEvent(new Event(TOGGLE_EVENT));
+  }
+}
+
 /**
- * Temporary diagnostic for edge-to-edge layouts: open any page with `?debug=insets`
- * to see the safe-area insets and viewport sizes the browser reports.
+ * Temporary diagnostic for edge-to-edge layouts: tap the app title five times (or open a page
+ * with `?debug=insets`) to see the safe-area insets and viewport sizes the browser reports.
  * Remove before the next release.
  */
 export function InsetDebug() {
-  const enabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "insets";
+  const [enabled, setEnabled] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "insets",
+  );
   const [info, setInfo] = useState<string[]>([]);
+
+  useEffect(() => {
+    const toggle = () => setEnabled((on) => !on);
+    window.addEventListener(TOGGLE_EVENT, toggle);
+    return () => window.removeEventListener(TOGGLE_EVENT, toggle);
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
