@@ -1,0 +1,75 @@
+name: Deploy preview
+
+# Every push to main deploys to the Cloudflare Pages preview branch, a fixed address next to
+# production: https://preview.<project>.pages.dev (e.g. preview.pendel-pilot.pages.dev).
+# A manual run (Actions → Deploy preview → Run workflow) deploys the selected branch there,
+# to try out a feature branch on a phone before it is merged.
+# Production is untouched: it is only deployed by publishing a release (deploy-production.yml).
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-deploy
+  # Only the newest push matters for the preview.
+  cancel-in-progress: true
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'pendel-pilot' }}
+  WRANGLER: npx --yes wrangler@4.107.0
+
+jobs:
+  deploy:
+    name: Validate and deploy to Cloudflare Pages preview
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate
+        run: npm run check
+
+      - name: Verify Cloudflare deployment secrets
+        run: |
+          missing=0
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is not set (Settings → Secrets and variables → Actions)."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      # The project is created by the production workflow; deploying to a branch that is not the
+      # production branch ("main") makes this a preview deployment.
+      - name: Deploy preview
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || format('Manual preview of {0}', github.ref_name) }}
+        run: |
+          $WRANGLER pages deploy dist \
+            --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --branch preview \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-message "$(printf '%s' "$COMMIT_MESSAGE" | head -n 1)"
+          {
+            echo "### Preview deployed"
+            echo ""
+            echo "Branch \`$GITHUB_REF_NAME\` at \`${GITHUB_SHA::7}\`: https://preview.$CLOUDFLARE_PAGES_PROJECT_NAME.pages.dev"
+          } >> "$GITHUB_STEP_SUMMARY"
