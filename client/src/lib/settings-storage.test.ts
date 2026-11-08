@@ -13,10 +13,18 @@ const sampleSettings = {
   homeLon: 13.369,
   workLat: 52.521,
   workLon: 13.411,
-  walkBufferMinutes: 5,
-  bikeBufferMinutes: 3,
-  homeLeavingBufferMinutes: 2,
-  workLeavingBufferMinutes: 2,
+  homeLeavingBufferSeconds: 120,
+  workLeavingBufferSeconds: 45,
+  homeBikeBufferSeconds: 180,
+  workBikeBufferSeconds: 0,
+  homeBikeParkingSeconds: 90,
+  workBikeParkingSeconds: 240,
+  homeWalkFixed: 1,
+  homeWalkFixedSeconds: 754,
+  homeBikeFixed: 0,
+  homeBikeFixedSeconds: 300,
+  workWalkFixed: 0,
+  workBikeFixed: 0,
   excludeFernverkehr: 1,
   glanceMode: 1,
   planMode: 1,
@@ -60,6 +68,52 @@ test("saveSettings + loadSettings roundtrip", () => {
   saveSettings(sampleSettings);
   const loaded = loadSettings();
   assert.deepEqual(loaded, sampleSettings);
+});
+
+test("older profiles: the shared bike buffer starts both sides, the walking buffer is dropped, minutes become seconds", () => {
+  const {
+    homeLeavingBufferSeconds: _homeLeaving,
+    workLeavingBufferSeconds: _workLeaving,
+    homeBikeBufferSeconds: _homeBike,
+    workBikeBufferSeconds: _workBike,
+    homeBikeParkingSeconds: _homeParking,
+    workBikeParkingSeconds: _workParking,
+    ...current
+  } = sampleSettings;
+  localStorageStub.setItem(
+    "pendelpilot.settings.v1",
+    JSON.stringify({
+      ...current,
+      walkBufferMinutes: 5,
+      bikeBufferMinutes: 3,
+      homeLeavingBufferMinutes: 2,
+      workLeavingBufferMinutes: 1,
+      workBikeParkingMinutes: 4,
+    })
+  );
+  const loaded = loadSettings() as Record<string, unknown> | null;
+  assert.equal(loaded?.homeLeavingBufferSeconds, 120);
+  assert.equal(loaded?.workLeavingBufferSeconds, 60);
+  assert.equal(loaded?.homeBikeBufferSeconds, 180);
+  assert.equal(loaded?.workBikeBufferSeconds, 180);
+  assert.equal(loaded?.homeBikeParkingSeconds, 0);
+  assert.equal(loaded?.workBikeParkingSeconds, 240);
+  for (const gone of ["walkBufferMinutes", "bikeBufferMinutes", "homeLeavingBufferMinutes", "workBikeParkingMinutes"]) {
+    assert.equal(gone in (loaded ?? {}), false, gone);
+  }
+});
+
+test("an address may stay empty only while both modes of its side use a fixed time", () => {
+  const bothFixed = { ...sampleSettings, homeAddress: "", homeLat: undefined, homeLon: undefined, homeBikeFixed: 1 };
+  assert.equal(saveSettings(bothFixed).homeAddress, "");
+  assert.throws(() => saveSettings({ ...bothFixed, homeBikeFixed: 0 }), /Home address is required/);
+  assert.throws(() => saveSettings({ ...sampleSettings, workAddress: "" }), /Work address is required/);
+});
+
+test("a ticked fixed time needs a value; an unticked one keeps its value", () => {
+  assert.throws(() => saveSettings({ ...sampleSettings, workWalkFixed: 1 }), /Fixed time is required/);
+  saveSettings({ ...sampleSettings, homeWalkFixed: 0 });
+  assert.equal(loadSettings()?.homeWalkFixedSeconds, 754);
 });
 
 test("clearSettings removes persisted settings", () => {

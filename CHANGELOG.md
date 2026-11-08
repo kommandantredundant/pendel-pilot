@@ -2,8 +2,16 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
-## Unreleased
+## 0.2.0
 
+- **Settings by place:** the "Preparation buffers" section is gone. Home and work each have their own section with address, station, how you get to the station, and their own buffers, because the two places mean different ways:
+  - **Leaving buffer:** time inside the building (stairs, lift), walking and cycling.
+  - **Bike buffer:** getting the bike out or putting it away; now separate for home and work.
+  - **Bike parking ↔ platform (new):** walking from where you park the bike to the platform.
+  - The walking buffer is gone; the leaving buffer covers it. The previous bike buffer becomes the starting value on both sides.
+- **Buffers to the second:** all buffers are entered as mm:ss instead of whole minutes. On a phone, "1,30" or "1.30" works too, since number pads have no colon. Saved minutes carry over.
+- **Buffers on arrival too:** a place's buffers now count when you arrive there as well, not only when you leave. Arrival times at the address get correspondingly later.
+- **Fixed times instead of routing (#6):** for each place, walking and cycling can each use your own door-to-platform time (mm:ss) instead of the route. It replaces the route and that mode's buffers. With both times fixed, the address is not needed and is greyed out, but kept.
 - **Start page:** `/` now explains Pendel-Pilot: who it is for, what it does and what not, and which apps suit you better for tickets, disruption alerts or changing destinations (operator apps, open-source apps, Transitous). It leads you to the settings to set up your commute, or straight to your commute once it is set up. A short section at the bottom points developers to GitHub.
 - **Home-screen app opens your commute:** the installed web app starts at `/towork` instead of `/`.
 - **OpenStreetMap attribution:** the footer now credits "© OpenStreetMap contributors" (German: "© OpenStreetMap-Mitwirkende"), as OpenStreetMap asks.

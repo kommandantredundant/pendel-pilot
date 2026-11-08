@@ -27,7 +27,7 @@ The dashboards come in three views (`client/src/hooks/use-active-view.ts`): the 
 | --- | --- | --- |
 | `GET /api/stations/search` | `query` (2–100 chars), optional `limit` (1–20; default 5) | Transitous stop matches (IDs such as `de-DELFI_de:03241:31`). |
 | `GET /api/addresses/geocode` | non-empty `q`, optional `limit` (1–10; default 5) | Photon address candidates and coordinates. |
-| `POST /api/journeys/calculate` | home/work station IDs, home/work coordinates, `direction` (`work` or `home`), `departureTime` and/or `arrivalTime` (ISO; departure wins when both are sent), optional minute buffers, optional `results` (1–12, default 1), optional `excludeLongDistance` | `options[]` (one canonical journey per connection, plus `lineName`, `transfers` and `legs[]` with line, departure/arrival times, delays, tracks and stop names) and `calculatedJourneys` holding the first option. |
+| `POST /api/journeys/calculate` | home/work station IDs, home/work coordinates (a side's may be left out when both of its ways are fixed), `direction` (`work` or `home`), `departureTime` and/or `arrivalTime` (ISO; departure wins when both are sent), optional per-side `buffers` in seconds, optional `fixedDurations`, optional `results` (1–12, default 1), optional `excludeLongDistance` | `options[]` (one canonical journey per connection, plus `lineName`, `transfers` and `legs[]` with line, departure/arrival times, delays, tracks and stop names) and `calculatedJourneys` holding the first option. |
 
 All endpoints use `{ "success": true, "data": ... }` on success and `{ "success": false, "error": { "code", "message", "details" } }` on failure. Validate external data before presenting it; a missing canonical field is an upstream-bad-response error, not an invitation to invent an alias.
 
@@ -39,9 +39,17 @@ The fixed journey is `A → B → C → D`:
 - `x` is the home address/station route, `y` is station-to-station public transport, and `z` is the work station/address route.
 - `journeyWork` travels A→D; `journeyHome` travels D→A. Segment `y` is named `transportWork` or `transportHome` to match direction.
 - `homeStationTime` and `workStationTime` are immutable station-time anchors. `routeHomeWalkSec`, `routeHomeBikeSec`, `routeWorkWalkSec`, and `routeWorkBikeSec` are durations in seconds.
-- Buffers enter as non-negative minutes and are converted to seconds. The canonical outputs are `homeAddressWalkTime`, `homeAddressBikeTime`, `workAddressWalkTime`, and `workAddressBikeTime`, all ISO 8601 timestamps.
+- All durations are whole seconds. Buffers (0–3600 s; a missing one is 0, an unknown key is rejected) exist per side: `bufferLeaveHomeSec`/`bufferLeaveWorkSec` (inside the building; walking and cycling), `bufferBikeHomeSec`/`bufferBikeWorkSec` (getting the bike out or putting it away; cycling only) and `bufferBikeParkingHomeSec`/`bufferBikeParkingWorkSec` (bike parking ↔ platform; cycling only). They have the same names in the request and in the canonical journey. No buffer is shared between the sides.
+- Optional `fixedDurations` (`homeWalkSec`, `homeBikeSec`, `workWalkSec`, `workBikeSec`; whole seconds up to 3 h) replace the route and all buffers of that side and mode. OSRM is not asked for a fixed way, and the journey carries `fixedHomeWalkSec` etc. with the matching `route*Sec` set to the same value. A side whose walk and bike times are both fixed needs no address in the request.
+- The canonical outputs are `homeAddressWalkTime`, `homeAddressBikeTime`, `workAddressWalkTime`, and `workAddressBikeTime`, all ISO 8601 timestamps.
 
-For `journeyWork`, subtract the home-station, home-route, preparation, and leave-home buffers from `homeStationTime`; add the work-station buffer and work-route duration to `workStationTime`. For `journeyHome`, add the home-station buffer and home-route duration to `homeStationTime`; subtract the work-station, work-route, preparation, and leave-work buffers from `workStationTime`. The implementations and runtime validation live in `src/models/canonicalJourney.ts`.
+The way of a side is the same in both directions, so its buffers apply both when leaving towards the station and when arriving from it:
+
+- home walk = `fixedHomeWalkSec` or `routeHomeWalkSec + bufferLeaveHomeSec`
+- home bike = `fixedHomeBikeSec` or `routeHomeBikeSec + bufferLeaveHomeSec + bufferBikeHomeSec + bufferBikeParkingHomeSec`
+- the work side likewise with its own fields.
+
+For `journeyWork`, subtract the home way from `homeStationTime` and add the work way to `workStationTime`. For `journeyHome`, add the home way to `homeStationTime` and subtract the work way from `workStationTime`. The implementations and runtime validation live in `src/models/canonicalJourney.ts`.
 
 ## Providers and resilience
 
@@ -55,15 +63,13 @@ Use request deduplication, debounce address searches by 300–500 ms, and honor 
 
 ## Browser storage
 
-The React UI stores its profile (addresses with coordinates, stations, buffers, language, long-distance filter) under `pendelpilot.settings.v1` (`client/src/lib/settings-storage.ts`).
+The React UI keeps everything in `localStorage`; there is no other browser state and no server-side user data:
 
-The backend model also defines a richer versioned store under `dailyjourney.v2.*` (`src/models/localPersistence.ts`, used by the view models in `src/frontend/`), which the React UI does not use yet:
+- `pendelpilot.settings.v1` — the profile: addresses with coordinates, stations, per-side buffers and fixed times, travel modes, long-distance filter, view choices, language (`client/src/lib/settings-storage.ts`, which also migrates older profiles).
+- `pendelpilot.theme` and `language` — appearance and language until a profile is saved.
+- `pendelpilot.api-metrics` — local request counters (`client/src/lib/metrics.ts`).
 
-- `commuteProfiles`, selected station/address snapshots, and buffer presets restore the user’s setup.
-- Persisted canonical journeys and transit, Photon, and OSRM cache envelopes provide bounded fallback behavior.
-- OSRM stores duration-only walk/bike data—not route geometry, instructions, or full upstream responses.
-
-Invalidate cache when addresses, stations, direction, buffer/routing assumptions, or the cache-key version changes; a manual refresh bypasses the relevant TTL. DB cache is short-lived (about 60–120 seconds), Photon cache is 7–30 days, and OSRM durations default to 14 days with a maximum 30-day stale window. The precise types, keys, validation, migration, and invalidation logic are in `src/models/localPersistence.ts`.
+Journeys are not stored in the browser; each view asks `/api/journeys/calculate` again. Walk and bike durations are cached by the backend (see "Providers and resilience").
 
 ## Operations
 
