@@ -31,7 +31,7 @@
 
 @media (display-mode: fullscreen) {
   /* Immersive: room for the camera cutout only, not the hidden status bar. */
-  :root { --safe-top: min(env(safe-area-inset-top), 1.75rem); }
+  :root { --safe-top: min(env(safe-area-inset-top), 2.25rem); }
 }
 
 @layer base {

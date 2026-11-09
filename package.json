@@ -14,7 +14,7 @@
     "test:client": "tsx --tsconfig tsconfig.client.json --test \"client/src/**/*.test.ts\"",
     "test": "npm run test:api && npm run test:client",
     "check": "npm run build && npm test",
-    "deploy:preview": "npm run build && npx wrangler@4.107.0 pages deploy dist --project-name pendel-pilot --branch preview",
+    "deploy:preview": "VITE_PREVIEW=1 npm run build && npx wrangler@4.107.0 pages deploy dist --project-name pendel-pilot --branch preview",
     "deploy:production": "npm run build && npx wrangler@4.107.0 pages deploy dist --project-name pendel-pilot --branch main",
     "deploy:cloudflare-pages": "npx wrangler@4.107.0 pages deploy dist --project-name ${CLOUDFLARE_PAGES_PROJECT_NAME:-pendel-pilot} --branch ${CF_PAGES_BRANCH:-main}"
   },
