@@ -6,7 +6,17 @@
 
 @layer utilities {
   /* Safe areas (notch, rounded corners, gesture bar); 0 unless the page draws edge-to-edge. */
-  .pt-safe-top { padding-top: env(safe-area-inset-top); }
+  .pt-safe-top { padding-top: var(--safe-top); }
+  /* Bottom navigation: its bottom padding grows into the gesture bar instead of adding to it. */
+  .pb-safe-nav { padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); }
+
+  /* Immersive browsers (display-mode: fullscreen, e.g. Chrome on Android) hide the status bar but
+     still report its full height as the top inset (66px measured), and report 0 at the bottom
+     although the gesture pill stays on top of the page. Only keep enough room at the top for the
+     camera cutout, and keep the bottom navigation's labels clear of the pill. */
+  @media (display-mode: fullscreen) {
+    .pb-safe-nav { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  }
   .pb-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
   /* Like px-4, but at least as wide as the side insets in landscape. */
   .px-safe-4 {
@@ -19,10 +29,17 @@
   }
 }
 
+@media (display-mode: fullscreen) {
+  /* Immersive: room for the camera cutout only, not the hidden status bar. */
+  :root { --safe-top: min(env(safe-area-inset-top), 1.75rem); }
+}
+
 @layer base {
   :root {
     /* Overwritten at runtime by BottomNav with its measured height. */
     --bottom-nav-space: 5.5rem;
+    /* Top safe area used by the header (and what sticks below it); see .pb-safe-nav for immersive mode. */
+    --safe-top: env(safe-area-inset-top);
     --font-sans: 'Inter', sans-serif;
     /* Times, lines and track numbers: a wide technical mono that reads like a departure board */
     --font-mono: 'Martian Mono', ui-monospace, monospace;

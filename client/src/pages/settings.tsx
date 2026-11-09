@@ -178,7 +178,7 @@ export default function SettingsPage() {
           </AlertDescription>
         </Alert>
       )}
-      <div className="sticky top-[calc(3rem+env(safe-area-inset-top))] z-10 flex items-center justify-between mb-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 -mx-2 px-2">
+      <div className="sticky top-[calc(3rem+var(--safe-top))] z-10 flex items-center justify-between mb-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 -mx-2 px-2">
         <div className="flex items-center gap-4">
           <div>
             <h1 className="text-xl font-bold tracking-tight">{t('settings.title', language)}</h1>

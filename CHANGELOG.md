@@ -2,6 +2,10 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## Unreleased
+
+- **Immersive mode on Android:** no more empty band above the title bar, and the bottom navigation stays clear of the home-screen pill. In immersive mode Chrome reports the hidden status bar as reserved space at the top and nothing at the bottom; Pendel-Pilot now keeps only room for the camera at the top and enough room for the pill at the bottom.
+
 ## 0.2.0
 
 - **Settings by place:** the "Preparation buffers" section is gone. Home and work each have their own section with address, station, how you get to the station, and their own buffers, because the two places mean different ways:
