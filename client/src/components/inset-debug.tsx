@@ -14,9 +14,9 @@ export function registerInsetDebugTap() {
 }
 
 /**
- * Temporary diagnostic for edge-to-edge layouts: tap the app title five times (or open a page
- * with `?debug=insets`) to see the safe-area insets and viewport sizes the browser reports.
- * Remove before the next release.
+ * Diagnostic for edge-to-edge layouts on different screens: tap the app title five times (or open
+ * a page with `?debug=insets`) to see the safe-area insets and viewport sizes the browser reports.
+ * Only built into dev and preview builds (VITE_PREVIEW=1, see layout.tsx); production leaves it out.
  */
 export function InsetDebug() {
   const [enabled, setEnabled] = useState(

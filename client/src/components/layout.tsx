@@ -12,6 +12,9 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { TrainIcon } from "@/components/train-icon";
 import { InsetDebug, registerInsetDebugTap } from "@/components/inset-debug";
 
+/** Inset diagnostic (5 taps on the title): only in dev and preview builds, never in production. */
+const INSET_DEBUG = import.meta.env.DEV || import.meta.env.VITE_PREVIEW === "1";
+
 export function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
@@ -40,7 +43,7 @@ export function Layout({ children }: LayoutProps) {
         <div className={cn("flex items-center px-safe-4 md:px-safe-8 py-3 mx-auto w-full", width)}>
           <div className="flex items-center gap-3">
             <TrainIcon className="w-5 h-5 text-primary" />
-            <span className="font-semibold text-foreground select-none" onClick={registerInsetDebugTap}>
+            <span className="font-semibold text-foreground select-none" onClick={INSET_DEBUG ? registerInsetDebugTap : undefined}>
               {t('app.title', language)}
               {(view === "glance" || view === "plan") && (
                 <span className="ml-1.5 font-mono-numbers text-[0.8em] font-medium uppercase tracking-wide text-primary">
@@ -83,7 +86,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Bottom Navigation */}
       <BottomNav />
-      <InsetDebug />
+      {INSET_DEBUG && <InsetDebug />}
     </div>
   );
 }

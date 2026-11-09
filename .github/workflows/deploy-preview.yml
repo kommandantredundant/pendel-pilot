@@ -24,6 +24,8 @@ env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'pendel-pilot' }}
   WRANGLER: npx --yes wrangler@4.107.0
+  # Preview builds include testing aids such as the safe-area diagnostic (5 taps on the title).
+  VITE_PREVIEW: "1"
 
 jobs:
   deploy:

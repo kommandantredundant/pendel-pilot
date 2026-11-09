@@ -69,7 +69,7 @@ Pendel-Pilot runs as the Cloudflare Pages project `pendel-pilot`: static UI from
 
 Publishing a GitHub release runs the workflow `Deploy production` (`.github/workflows/deploy-production.yml`). It checks out the release tag, runs `npm run check`, and deploys `dist/` and `functions/` to production. Pre-releases are not deployed. The workflow uses the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; the repository variable `CLOUDFLARE_PAGES_PROJECT_NAME` overrides the project name.
 
-Every push to `main` runs the workflow `Deploy preview` (`.github/workflows/deploy-preview.yml`): it runs `npm run check` and deploys to the Cloudflare Pages branch `preview`, reachable at `https://preview.pendel-pilot.pages.dev`. To try a feature branch before merging, run the workflow by hand (Actions → Deploy preview → Run workflow) and pick the branch. Production stays untouched; it uses the same secrets.
+Every push to `main` runs the workflow `Deploy preview` (`.github/workflows/deploy-preview.yml`): it runs `npm run check` and deploys to the Cloudflare Pages branch `preview`, reachable at `https://preview.pendel-pilot.pages.dev`. To try a feature branch before merging, run the workflow by hand (Actions → Deploy preview → Run workflow) and pick the branch. Production stays untouched; it uses the same secrets. Preview builds (`VITE_PREVIEW=1`, also `npm run dev`) include a safe-area diagnostic for testing on different screens: tap "Pendel-Pilot" in the title bar five times. Production builds leave it out.
 
 ## Contributing
 
