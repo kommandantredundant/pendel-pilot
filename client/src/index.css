@@ -34,6 +34,9 @@
   :root { --safe-top: min(env(safe-area-inset-top), 2.25rem); }
 }
 
+/* Set by the script in index.html when the page does not reach the top of the screen. */
+:root.no-top-inset { --safe-top: 0px; }
+
 @layer base {
   :root {
     /* Overwritten at runtime by BottomNav with its measured height. */
