@@ -18,6 +18,11 @@ function applyPreference(preference: ThemePreference): void {
   const dark =
     preference === "dark" || (preference === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.classList.toggle("dark", dark);
+  // Browser bars (status bar, address bar) follow the theme chosen in the app, not only the system
+  // setting. Colours match the header (--card); keep in sync with the pre-paint script in index.html.
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    meta.content = dark ? "#161a22" : "#ffffff";
+  });
 }
 
 /** Theme preference kept per browser; "system" follows the OS setting live. */

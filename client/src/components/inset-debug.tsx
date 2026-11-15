@@ -44,6 +44,7 @@ export function InsetDebug() {
       setInfo([
         `safe top ${cs.paddingTop} · bottom ${cs.paddingBottom}`,
         `safe left ${cs.paddingLeft} · right ${cs.paddingRight}`,
+        `top used ${getComputedStyle(document.querySelector("nav") ?? probe).paddingTop} · page covers screen: ${document.documentElement.classList.contains("no-top-inset") ? "no" : "yes"}`,
         `inner ${window.innerWidth}×${window.innerHeight}`,
         `visual ${vv ? `${Math.round(vv.width)}×${Math.round(vv.height)}` : "–"}`,
         `screen ${screen.width}×${screen.height} · dpr ${window.devicePixelRatio}`,

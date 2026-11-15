@@ -21,7 +21,26 @@
         var theme = localStorage.getItem("pendelpilot.theme");
         var dark = theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.classList.toggle("dark", dark);
+        // Browser bars follow the theme chosen in the app, not only the system setting (see lib/theme.ts).
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < metas.length; i++) metas[i].content = dark ? "#161a22" : "#ffffff";
       } catch (e) {}
+
+      // Some Android browsers (WebView based, e.g. DuckDuckGo, Hermit) report the status bar height
+      // as safe-area-inset-top even when the page starts below the status bar or address bar.
+      // Only trust the top inset when the page really covers the whole screen height.
+      // The tallest viewport seen per orientation counts, so an open keyboard changes nothing.
+      (function () {
+        var root = document.documentElement, orientation = "", tallest = 0;
+        function check() {
+          var current = screen.width + "x" + screen.height;
+          if (current !== orientation) { orientation = current; tallest = 0; }
+          tallest = Math.max(tallest, window.innerHeight);
+          root.classList.toggle("no-top-inset", screen.height - tallest > 8);
+        }
+        check();
+        window.addEventListener("resize", check);
+      })();
     </script>
   </head>
   <body>
