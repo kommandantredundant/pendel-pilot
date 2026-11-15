@@ -7,6 +7,7 @@ Publishing a GitHub release deploys that version to Cloudflare Pages (see README
 - **Immersive mode on Android:** no more empty band above the title bar, and the bottom navigation stays clear of the home-screen pill. In immersive mode Chrome reports the hidden status bar as reserved space at the top and nothing at the bottom; Pendel-Pilot now keeps only room for the camera at the top and enough room for the pill at the bottom.
 - **No empty band in Android browsers:** some browsers (for example DuckDuckGo and other WebView-based ones) report reserved space at the top although the page already starts below the status bar and address bar. Pendel-Pilot now only keeps that space free when it really fills the whole screen.
 - **Browser bars follow the app theme:** the status bar and address bar colour now match the light or dark theme chosen in the app, not only the system setting.
+- **Dark bars for the installed app:** the installed app's status bar and start screen now use the dark header and background colours instead of blue and light grey; some browsers (for example Firefox on Android) take these from the app manifest. Reinstall the app from the browser to pick this up.
 
 ## 0.2.0
 
