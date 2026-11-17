@@ -313,8 +313,7 @@ function HeroCard({
         {t('glance.arrive', language)}{" "}
         <span className="font-mono-numbers text-foreground/80">{format(parseISO(arriveTime(suggestion, arrivalMode)), "HH:mm")}</span>
       </p>
-      {/* The title already says it is remembered. */}
-      <PinButton pinned={pinned} onToggle={onToggle} mark={false} />
+      <PinButton pinned={pinned} onToggle={onToggle} />
     </article>
   );
 }
@@ -408,7 +407,12 @@ function LaterRow({
 }) {
   const { style, ...press } = useLongPress(onToggle);
   return (
-    <tr {...press} style={style} className={cn("select-none", pinned && "bg-primary-tint")}>
+    // Same blue frame as the big card, drawn inside the row so the row height stays the same.
+    <tr
+      {...press}
+      style={style}
+      className={cn("select-none", pinned && "bg-primary-tint outline outline-2 -outline-offset-2 outline-primary/70")}
+    >
       {TRAVEL_MODES.map((mode) => {
         const status = modeStatus(suggestion, mode, now);
         const preferred = preference === "both" || preference === mode;
@@ -437,18 +441,12 @@ function LaterRow({
 
 /**
  * Long press has no keyboard or screen-reader equivalent, so every connection also gets a button that
- * only shows up when focused. A remembered row shows a visible mark instead.
+ * only shows up when focused.
  */
-function PinButton({ pinned, onToggle, mark = true }: { pinned: boolean; onToggle: () => void; mark?: boolean }) {
+function PinButton({ pinned, onToggle }: { pinned: boolean; onToggle: () => void }) {
   const { language } = useLanguage();
   return (
     <>
-      {pinned && mark && (
-        <span className="mt-0.5 inline-flex items-center gap-1 text-primary text-[11px] font-sans" aria-hidden>
-          <Bookmark className="w-3 h-3 fill-current" />
-          {t('glance.pin.marked', language)}
-        </span>
-      )}
       <button
         type="button"
         onClick={onToggle}
