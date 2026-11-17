@@ -2,7 +2,7 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
-## Unreleased
+## 0.3.0
 
 - **Remember a connection in Glance (#13):** long-press a connection (the big card or a row in "Later connections") to remember it. The big card then follows that connection as "Your connection", with countdown and delays, and its row in the list gets the same blue frame; the list itself stays as it is. Long-press it again to forget it. Once it can no longer be made (missed, connection broken, train cancelled), it is dropped, Glance shows the next connection you can make again, and "Remembered connection no longer possible" appears for 5 minutes. One connection per direction, kept on this device only. Until you have used it once, a line under the list explains the long press; with a keyboard or screen reader, each connection has its own button.
 - **Immersive mode on Android:** no more empty band above the title bar, and the bottom navigation stays clear of the home-screen pill. In immersive mode Chrome reports the hidden status bar as reserved space at the top and nothing at the bottom; Pendel-Pilot now keeps only room for the camera at the top and enough room for the pill at the bottom.
