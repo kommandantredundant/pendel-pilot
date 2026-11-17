@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { AlertTriangle, ArrowRight, Bike, ChevronRight, Footprints, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bike, Bookmark, ChevronRight, Footprints, RefreshCw } from "lucide-react";
 import type { CommuteSuggestion } from "@shared/routes";
 import { useJourneysWithRefresh } from "@/hooks/use-transport";
 import { useSettings } from "@/hooks/use-settings";
+import { useGlancePin } from "@/hooks/use-glance-pin";
+import { useLongPress } from "@/hooks/use-long-press";
 import { ErrorDisplay } from "@/components/error-display";
 import { DepartureTime, LinePill } from "@/components/journey-card";
 import { cn } from "@/components/layout";
@@ -24,6 +26,7 @@ import {
   type TravelMode,
   type Urgency,
 } from "@/lib/glance";
+import { lossIsRecent, pinKey, resolvePin } from "@/lib/glance-pin";
 
 const URGENCY_CLASS: Record<Urgency, string> = {
   relaxed: "text-foreground",
@@ -53,11 +56,28 @@ export function DashboardGlance({ destination }: { destination: "work" | "home" 
   const { data: settings } = useSettings();
   const { data: journeys, isLoading, isError, error, refresh, lastUpdated } = useJourneysWithRefresh(destination);
   const now = useNow();
+  const remembered = useGlancePin(destination);
+
+  const preference: ModePreference =
+    (destination === "work" ? settings?.stationModeFromHome : settings?.stationModeFromWork) ?? "both";
+  // Only judge the remembered connection on loaded data; on an error it is kept.
+  const resolution = journeys && !isError ? resolvePin(journeys, remembered.current, preference, now) : undefined;
+  const lost = resolution?.state === "lost";
+
+  // A remembered connection that cannot be made any more (missed, or no longer listed) is dropped.
+  useEffect(() => {
+    if (lost && remembered.current) remembered.markLost(lossIsRecent(remembered.current, Date.now()));
+  }, [lost, remembered]);
 
   if (!settings) return null;
-  const preference: ModePreference =
-    (destination === "work" ? settings.stationModeFromHome : settings.stationModeFromWork) ?? "both";
   const selection = journeys ? selectGlance(journeys, preference, now) : undefined;
+  const pinned = resolution?.state === "active" ? resolution.suggestion : undefined;
+  const hero = pinned ?? selection?.next;
+  // With a remembered connection, the list shows every reachable connection, that one highlighted.
+  const later = pinned && selection?.next ? [selection.next, ...selection.later] : (selection?.later ?? []);
+  const pinnedKey = pinned ? pinKey(pinned) : undefined;
+  const toggle = (suggestion: CommuteSuggestion) =>
+    pinKey(suggestion) === pinnedKey ? remembered.unpin() : remembered.pin(suggestion);
 
   return (
     <div className="space-y-3">
@@ -70,10 +90,17 @@ export function DashboardGlance({ destination }: { destination: "work" | "home" 
 
       {isError && <ErrorDisplay error={error} language={language} showFixAction={true} />}
 
+      {remembered.lostHintVisible(now) && (
+        <p role="status" className="rounded-xl bg-secondary px-4 py-2.5 text-sm text-center flex items-center justify-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-hurry shrink-0" aria-hidden />
+          {t('glance.pin.lost', language)}
+        </p>
+      )}
+
       {isLoading ? (
         <Skeleton className="h-72 w-full rounded-2xl bg-card border border-border/70" />
-      ) : selection?.next ? (
-        <HeroCard suggestion={selection.next} preference={preference} now={now} />
+      ) : hero ? (
+        <HeroCard suggestion={hero} preference={preference} now={now} pinned={!!pinned} onToggle={() => toggle(hero)} />
       ) : (
         !isError && (
           <div className="bg-card rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">
@@ -92,8 +119,13 @@ export function DashboardGlance({ destination }: { destination: "work" | "home" 
         </p>
       )}
 
-      {!!selection?.later.length && (
-        <LaterList suggestions={selection.later} preference={preference} now={now} />
+      {!!later.length && (
+        <LaterList suggestions={later} preference={preference} now={now} pinnedKey={pinnedKey} onToggle={toggle} />
+      )}
+
+      {/* Long press is invisible, so say it until something has been remembered once. */}
+      {!remembered.used && !!hero && (
+        <p className="text-xs text-muted-foreground text-center">{t('glance.pin.hint', language)}</p>
       )}
 
       {/* Thumb zone: refresh sticks just above the bottom navigation and settles above the footer at the end. */}
@@ -211,8 +243,21 @@ function OtherModeLine({ suggestion, mode, now }: { suggestion: CommuteSuggestio
   );
 }
 
-function HeroCard({ suggestion, preference, now }: { suggestion: CommuteSuggestion; preference: ModePreference; now: number }) {
+function HeroCard({
+  suggestion,
+  preference,
+  now,
+  pinned,
+  onToggle,
+}: {
+  suggestion: CommuteSuggestion;
+  preference: ModePreference;
+  now: number;
+  pinned: boolean;
+  onToggle: () => void;
+}) {
   const { language } = useLanguage();
+  const { style: pressStyle, ...press } = useLongPress(onToggle);
   const hurrying =
     preference === "both"
       ? TRAVEL_MODES.every((mode) => modeStatus(suggestion, mode, now) !== "ok")
@@ -222,12 +267,22 @@ function HeroCard({ suggestion, preference, now }: { suggestion: CommuteSuggesti
 
   return (
     <article
+      {...press}
+      style={pressStyle}
       className={cn(
-        "bg-card rounded-2xl border shadow-sm px-5 py-5 text-center",
-        hurrying ? "border-hurry/70 ring-1 ring-hurry/40" : "border-border/70"
+        "bg-card rounded-2xl border shadow-sm px-5 py-5 text-center select-none",
+        hurrying ? "border-hurry/70 ring-1 ring-hurry/40" : pinned ? "border-primary/70 ring-1 ring-primary/40" : "border-border/70"
       )}
     >
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('glance.next', language)}</h2>
+      <h2
+        className={cn(
+          "text-[11px] font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5",
+          pinned ? "text-primary" : "text-muted-foreground"
+        )}
+      >
+        {pinned && <Bookmark className="w-3.5 h-3.5 fill-current" aria-hidden />}
+        {t(pinned ? 'glance.pinned' : 'glance.next', language)}
+      </h2>
 
       {preference === "both" ? (
         <div className="mt-3 grid grid-cols-2 divide-x divide-border/70">
@@ -258,6 +313,8 @@ function HeroCard({ suggestion, preference, now }: { suggestion: CommuteSuggesti
         {t('glance.arrive', language)}{" "}
         <span className="font-mono-numbers text-foreground/80">{format(parseISO(arriveTime(suggestion, arrivalMode)), "HH:mm")}</span>
       </p>
+      {/* The title already says it is remembered. */}
+      <PinButton pinned={pinned} onToggle={onToggle} mark={false} />
     </article>
   );
 }
@@ -282,7 +339,19 @@ function AlternativeHint({ suggestion, mode, now }: { suggestion: CommuteSuggest
 }
 
 /** Later connections as a small timetable: when to leave on foot and by bike first, the train second. */
-function LaterList({ suggestions, preference, now }: { suggestions: CommuteSuggestion[]; preference: ModePreference; now: number }) {
+function LaterList({
+  suggestions,
+  preference,
+  now,
+  pinnedKey,
+  onToggle,
+}: {
+  suggestions: CommuteSuggestion[];
+  preference: ModePreference;
+  now: number;
+  pinnedKey?: string;
+  onToggle: (suggestion: CommuteSuggestion) => void;
+}) {
   const { language } = useLanguage();
   return (
     <section className="bg-card rounded-xl border border-border/70 shadow-sm">
@@ -305,34 +374,90 @@ function LaterList({ suggestions, preference, now }: { suggestions: CommuteSugge
           </tr>
         </thead>
         <tbody className="divide-y divide-border/70 border-t border-border/70">
-          {suggestions.map((suggestion, index) => (
-            <tr key={index}>
-              {TRAVEL_MODES.map((mode) => {
-                const status = modeStatus(suggestion, mode, now);
-                const preferred = preference === "both" || preference === mode;
-                return (
-                  <td
-                    key={mode}
-                    className={cn(
-                      "px-4 py-2.5 font-mono-numbers",
-                      preferred ? "text-base font-semibold" : "text-sm text-foreground/75",
-                      status === "hurry" && "text-hurry",
-                      status === "missed" && "line-through opacity-40"
-                    )}
-                  >
-                    {format(parseISO(leaveTime(suggestion, mode)), "HH:mm")}
-                  </td>
-                );
-              })}
-              <td className="px-4 py-2.5 text-right text-xs font-mono-numbers text-muted-foreground">
-                <span className="block truncate">{suggestion.journey.legs.map((leg) => leg.lineName).join(" › ")}</span>
-                <TrainDeparture leg={suggestion.journey.legs[0]} />
-              </td>
-            </tr>
-          ))}
+          {suggestions.map((suggestion, index) => {
+            const key = pinKey(suggestion);
+            return (
+              <LaterRow
+                key={`${key}#${index}`}
+                suggestion={suggestion}
+                preference={preference}
+                now={now}
+                pinned={key === pinnedKey}
+                onToggle={() => onToggle(suggestion)}
+              />
+            );
+          })}
         </tbody>
       </table>
     </section>
+  );
+}
+
+function LaterRow({
+  suggestion,
+  preference,
+  now,
+  pinned,
+  onToggle,
+}: {
+  suggestion: CommuteSuggestion;
+  preference: ModePreference;
+  now: number;
+  pinned: boolean;
+  onToggle: () => void;
+}) {
+  const { style, ...press } = useLongPress(onToggle);
+  return (
+    <tr {...press} style={style} className={cn("select-none", pinned && "bg-primary-tint")}>
+      {TRAVEL_MODES.map((mode) => {
+        const status = modeStatus(suggestion, mode, now);
+        const preferred = preference === "both" || preference === mode;
+        return (
+          <td
+            key={mode}
+            className={cn(
+              "px-4 py-2.5 font-mono-numbers",
+              preferred ? "text-base font-semibold" : "text-sm text-foreground/75",
+              status === "hurry" && "text-hurry",
+              status === "missed" && "line-through opacity-40"
+            )}
+          >
+            {format(parseISO(leaveTime(suggestion, mode)), "HH:mm")}
+          </td>
+        );
+      })}
+      <td className="px-4 py-2.5 text-right text-xs font-mono-numbers text-muted-foreground">
+        <span className="block truncate">{suggestion.journey.legs.map((leg) => leg.lineName).join(" › ")}</span>
+        <TrainDeparture leg={suggestion.journey.legs[0]} />
+        <PinButton pinned={pinned} onToggle={onToggle} />
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * Long press has no keyboard or screen-reader equivalent, so every connection also gets a button that
+ * only shows up when focused. A remembered row shows a visible mark instead.
+ */
+function PinButton({ pinned, onToggle, mark = true }: { pinned: boolean; onToggle: () => void; mark?: boolean }) {
+  const { language } = useLanguage();
+  return (
+    <>
+      {pinned && mark && (
+        <span className="mt-0.5 inline-flex items-center gap-1 text-primary text-[11px] font-sans" aria-hidden>
+          <Bookmark className="w-3 h-3 fill-current" />
+          {t('glance.pin.marked', language)}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={pinned}
+        className="sr-only focus:not-sr-only focus:mt-2 focus:inline-block focus:rounded-md focus:border focus:border-border focus:px-2 focus:py-1 focus:text-xs"
+      >
+        {t(pinned ? 'glance.pin.remove' : 'glance.pin.add', language)}
+      </button>
+    </>
   );
 }
 
