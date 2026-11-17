@@ -1,7 +1,7 @@
 import type { CommuteSuggestion } from "@shared/routes";
 import { countedModes, modeStatus, type ModePreference } from "./glance";
 
-/** How long "Verbindung nicht mehr fahrbar" stays visible after a remembered connection is lost. */
+/** How long "Gemerkte Verbindung nicht mehr fahrbar" stays visible after a remembered connection is lost. */
 export const PIN_LOST_HINT_MS = 5 * 60_000;
 
 /** A pin that ran out longer ago than this (app closed in between) is dropped without the hint. */

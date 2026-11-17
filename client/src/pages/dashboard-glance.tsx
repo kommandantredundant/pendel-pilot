@@ -73,8 +73,9 @@ export function DashboardGlance({ destination }: { destination: "work" | "home" 
   const selection = journeys ? selectGlance(journeys, preference, now) : undefined;
   const pinned = resolution?.state === "active" ? resolution.suggestion : undefined;
   const hero = pinned ?? selection?.next;
-  // With a remembered connection, the list shows every reachable connection, that one highlighted.
-  const later = pinned && selection?.next ? [selection.next, ...selection.later] : (selection?.later ?? []);
+  // The list stays exactly as it is when a connection is remembered (no rows moving or appearing);
+  // the remembered row is only highlighted.
+  const later = selection?.later ?? [];
   const pinnedKey = pinned ? pinKey(pinned) : undefined;
   const toggle = (suggestion: CommuteSuggestion) =>
     pinKey(suggestion) === pinnedKey ? remembered.unpin() : remembered.pin(suggestion);
