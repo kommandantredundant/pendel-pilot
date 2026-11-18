@@ -2,6 +2,12 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## Unreleased
+
+- **One choice for the view:** the separate Glance and Planner checkboxes in the settings are replaced by one "View" choice: Classic, Glance or Planner. Phones never offer Planner (it is greyed out). On laptops, desktops and tablets Planner shows from 1024 px window width; in narrower windows (for example a tablet held upright) the classic view appears until the window is wide enough again.
+- **Switch the view from the dashboard:** the title bar now has a quick switch that saves your choice. On a phone it is a single Glance switch (on = Glance, off = classic); on other devices the same Classic / Glance / Planner choice as in the settings.
+- **Tidier bottom navigation:** the three entries are evenly spaced whatever the label length, the active entry gets a pill behind its icon, and tapping no longer leaves a frame around it on Android (the focus ring now only shows for keyboard use).
+
 ## 0.3.0
 
 - **Remember a connection in Glance (#13):** long-press a connection (the big card or a row in "Later connections") to remember it. The big card then follows that connection as "Your connection", with countdown and delays, and its row in the list gets the same blue frame; the list itself stays as it is. Long-press it again to forget it. Once it can no longer be made (missed, connection broken, train cancelled), it is dropped, Glance shows the next connection you can make again, and "Remembered connection no longer possible" appears for 5 minutes. One connection per direction, kept on this device only. Until you have used it once, a line under the list explains the long press; with a keyboard or screen reader, each connection has its own button.

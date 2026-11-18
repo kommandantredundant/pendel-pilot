@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { loadSettings, saveSettings } from "@/lib/settings-storage";
 import { resolveAddressCoordinates } from "@/lib/address-coordinates";
 import { isAppError } from "@/lib/app-error";
+import { choiceFlags, type ViewChoice } from "@/lib/view-mode";
 import type { Language } from "@/lib/i18n";
 
 /** Localised toast text for a failed save; app errors explain themselves instead of showing their type id. */
@@ -58,4 +59,18 @@ export function useUpdateSettings() {
       toast({ ...saveErrorToast(error, (settings.language as Language) ?? "en"), variant: "destructive" });
     },
   });
+}
+
+/**
+ * Switch the dashboard view from the header: stores just the view flags of the saved profile, without the
+ * address lookup and toast of a full save.
+ */
+export function useSetViewChoice() {
+  const queryClient = useQueryClient();
+  return (choice: ViewChoice) => {
+    const current = loadSettings();
+    if (!current) return;
+    saveSettings({ ...current, ...choiceFlags(choice) });
+    queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY });
+  };
 }

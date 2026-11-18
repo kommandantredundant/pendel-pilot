@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, Loader2, Zap, Route, Eye, CalendarRange } from "lucide-react";
+import { Save, Loader2, Zap, Route, LayoutDashboard } from "lucide-react";
 import { useLocation } from "wouter";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
 import { SettingsSideSection } from "@/components/settings-side-section";
@@ -12,6 +12,9 @@ import type { Language } from "@/lib/i18n";
 import { isStorageAvailable } from "@/lib/settings-storage";
 import { settingsFormSchema, type SettingsFormValues } from "@/lib/settings-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SegmentedControl } from "@/components/segmented-control";
+import { useDeviceClass } from "@/hooks/use-active-view";
+import { choiceFlags, storedChoice } from "@/lib/view-mode";
 
 import {
   Form,
@@ -42,6 +45,7 @@ export default function SettingsPage() {
   const [isCalculatingRoutes, setIsCalculatingRoutes] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [routingError, setRoutingError] = useState<Error | unknown>(null);
+  const { mobile, wide } = useDeviceClass();
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
@@ -71,6 +75,9 @@ export default function SettingsPage() {
       language,
     },
   });
+
+  const watchedGlance = form.watch("glanceMode");
+  const watchedPlan = form.watch("planMode");
 
   useEffect(() => {
     if (settings) {
@@ -251,62 +258,46 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Glance view */}
+          {/* Dashboard view: one choice; phones never offer Planner, narrow windows fall back to classic */}
           <Card className="bg-card border-border/70 shadow-sm rounded-xl">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Eye className="w-4 h-4 text-muted-foreground" /> Glance
+                <LayoutDashboard className="w-4 h-4 text-muted-foreground" /> {t('settings.view.title', language)}
               </CardTitle>
-              <CardDescription>{t('settings.glance.desc', language)}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <FormField
-                control={form.control}
-                name="glanceMode"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value === 1}
-                        onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
-                      />
-                    </FormControl>
-                    <div className="flex-1">
-                      <FormLabel className="cursor-pointer font-medium">{t('settings.glance.enable', language)}</FormLabel>
-                      <FormDescription>{t('settings.glance.enable.desc', language)}</FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Planner view (desktop) */}
-          <Card className="bg-card border-border/70 shadow-sm rounded-xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CalendarRange className="w-4 h-4 text-muted-foreground" /> Planner
-              </CardTitle>
-              <CardDescription>{t('settings.plan.desc', language)}</CardDescription>
+              <CardDescription>{t('settings.view.desc', language)}</CardDescription>
             </CardHeader>
             <CardContent>
               <FormField
                 control={form.control}
                 name="planMode"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value === 1}
-                        onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                render={() => {
+                  const choice = storedChoice({ glanceMode: watchedGlance, planMode: watchedPlan }, mobile);
+                  const planHint = mobile
+                    ? t('settings.view.plan.mobile', language)
+                    : choice === "plan" && !wide
+                      ? t('settings.view.plan.narrow', language)
+                      : null;
+                  return (
+                    <FormItem className="space-y-3">
+                      <SegmentedControl
+                        ariaLabel={t('settings.view.title', language)}
+                        value={choice}
+                        onChange={(next) => {
+                          const flags = choiceFlags(next);
+                          form.setValue("glanceMode", flags.glanceMode, { shouldDirty: true });
+                          form.setValue("planMode", flags.planMode, { shouldDirty: true });
+                        }}
+                        options={[
+                          { value: "classic", label: t('view.classic', language) },
+                          { value: "glance", label: t('view.glance', language) },
+                          { value: "plan", label: t('view.plan', language), disabled: mobile, title: mobile ? t('settings.view.plan.mobile', language) : undefined },
+                        ]}
                       />
-                    </FormControl>
-                    <div className="flex-1">
-                      <FormLabel className="cursor-pointer font-medium">{t('settings.plan.enable', language)}</FormLabel>
-                      <FormDescription>{t('settings.plan.enable.desc', language)}</FormDescription>
-                    </div>
-                  </FormItem>
-                )}
+                      <FormDescription>{t(`settings.view.${choice}.desc`, language)}</FormDescription>
+                      {planHint && <p className="text-sm text-muted-foreground">{planHint}</p>}
+                    </FormItem>
+                  );
+                }}
               />
             </CardContent>
           </Card>
