@@ -14,7 +14,6 @@ interface SegmentedControlProps<T extends string> {
   options: SegmentOption<T>[];
   onChange: (value: T) => void;
   ariaLabel: string;
-  size?: "default" | "sm";
   className?: string;
 }
 
@@ -27,7 +26,6 @@ export function SegmentedControl<T extends string>({
   options,
   onChange,
   ariaLabel,
-  size = "default",
   className,
 }: SegmentedControlProps<T>) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -70,7 +68,7 @@ export function SegmentedControl<T extends string>({
               "rounded-md font-medium transition-colors whitespace-nowrap",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               "disabled:cursor-not-allowed disabled:opacity-45",
-              size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",
+              "px-3 py-1.5 text-sm",
               selected
                 ? "bg-card text-foreground shadow-sm font-semibold"
                 : "text-muted-foreground enabled:hover:text-foreground",

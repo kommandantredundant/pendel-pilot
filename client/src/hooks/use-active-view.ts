@@ -26,19 +26,13 @@ export function useDeviceClass(): { mobile: boolean; wide: boolean } {
   return { mobile, wide };
 }
 
-/** The profile's view choice as this device can offer it (phones never offer Planner). */
-export function useViewChoice(): { choice: ViewChoice; mobile: boolean; wide: boolean; isLoading: boolean } {
-  const { data: settings, isLoading } = useSettings();
-  const device = useDeviceClass();
-  return { choice: storedChoice(settings, device.mobile), ...device, isLoading };
-}
-
 /**
  * Which dashboard to show: the stored choice, except that Planner falls back to the classic cards on
  * phones and in windows narrower than PLAN_MIN_WIDTH.
  */
 export function useActiveView(): ActiveView {
-  const { choice, mobile, wide, isLoading } = useViewChoice();
+  const { data: settings, isLoading } = useSettings();
+  const device = useDeviceClass();
   if (isLoading) return "loading";
-  return resolveView(choice, { mobile, wide });
+  return resolveView(storedChoice(settings, device.mobile), device);
 }

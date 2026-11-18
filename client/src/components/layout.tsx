@@ -6,10 +6,7 @@ import { twMerge } from "tailwind-merge";
 import { useLanguage } from "@/lib/language-context";
 import { t } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
-import { useActiveView, useViewChoice } from "@/hooks/use-active-view";
-import { useSettings, useSetViewChoice } from "@/hooks/use-settings";
-import { SegmentedControl } from "@/components/segmented-control";
-import { Switch } from "@/components/ui/switch";
+import { useActiveView } from "@/hooks/use-active-view";
 import { BottomNav } from "@/components/bottom-nav";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { TrainIcon } from "@/components/train-icon";
@@ -43,10 +40,10 @@ export function Layout({ children }: LayoutProps) {
       {/* Safe-area padding keeps the header clear of the camera cutout and rounded corners
           when the browser draws edge-to-edge (immersive / viewport-fit=cover). */}
       <nav className="border-b border-border/70 sticky top-0 bg-card/95 backdrop-blur z-10 pt-safe-top">
-        <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 px-safe-4 md:px-safe-8 py-3 mx-auto w-full", width)}>
-          <div className="flex items-center gap-3 min-w-0">
-            <TrainIcon className="w-5 h-5 shrink-0 text-primary" />
-            <span className="font-semibold text-foreground select-none truncate" onClick={INSET_DEBUG ? registerInsetDebugTap : undefined}>
+        <div className={cn("flex items-center px-safe-4 md:px-safe-8 py-3 mx-auto w-full", width)}>
+          <div className="flex items-center gap-3">
+            <TrainIcon className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-foreground select-none" onClick={INSET_DEBUG ? registerInsetDebugTap : undefined}>
               {t('app.title', language)}
               {(view === "glance" || view === "plan") && (
                 <span className="ml-1.5 font-mono-numbers text-[0.8em] font-medium uppercase tracking-wide text-primary">
@@ -55,19 +52,15 @@ export function Layout({ children }: LayoutProps) {
               )}
             </span>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            {/* Not on the settings page: there the form holds the choice until it is saved. */}
-            {location !== "/settings" && <ViewSwitcher />}
-            <button
-              type="button"
-              onClick={cycle}
-              className={cn("w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors")}
-              aria-label={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
-              title={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
-            >
-              <ThemeIcon className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={cycle}
+            className={cn("ml-auto w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors")}
+            aria-label={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
+            title={`${t('theme.label', language)}: ${t(`theme.${preference}`, language)}`}
+          >
+            <ThemeIcon className="w-4 h-4" />
+          </button>
         </div>
       </nav>
 
@@ -112,45 +105,5 @@ export function DataSources({ className }: { className?: string }) {
             © {t('footer.osm', language)}
           </a>
         </p>
-  );
-}
-
-/**
- * Quick view switch in the header; it saves the choice to the profile. Phones get a single Glance switch
- * (on = Glance, off = classic). Other devices get the full choice; Planner is greyed out in windows too
- * narrow for it.
- */
-function ViewSwitcher() {
-  const { language } = useLanguage();
-  const { data: settings } = useSettings();
-  const { choice, mobile, wide, isLoading } = useViewChoice();
-  const setChoice = useSetViewChoice();
-  if (isLoading || !settings) return null;
-
-  if (mobile) {
-    return (
-      <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
-        {t('view.glance', language)}
-        <Switch
-          checked={choice === "glance"}
-          onCheckedChange={(on) => setChoice(on ? "glance" : "classic")}
-          aria-label={t('view.glance', language)}
-        />
-      </label>
-    );
-  }
-
-  return (
-    <SegmentedControl
-      size="sm"
-      ariaLabel={t('view.label', language)}
-      value={choice}
-      onChange={setChoice}
-      options={[
-        { value: "classic", label: t('view.classic', language) },
-        { value: "glance", label: t('view.glance', language) },
-        { value: "plan", label: t('view.plan', language), disabled: !wide, title: !wide ? t('settings.view.plan.narrow', language) : undefined },
-      ]}
-    />
   );
 }
