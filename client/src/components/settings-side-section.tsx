@@ -33,10 +33,13 @@ export function SettingsSideSection({
   side,
   form,
   language,
+  onAddressBlur,
 }: {
   side: "home" | "work";
   form: UseFormReturn<SettingsFormValues>;
   language: Language;
+  /** Addresses are saved (and looked up) when the field is left, not on every keystroke. */
+  onAddressBlur?: (side: "home" | "work") => void;
 }) {
   const fields = SIDE_FIELDS[side];
   const walkFixed = form.watch(fields.walkFixed) === 1;
@@ -65,6 +68,10 @@ export function SettingsSideSection({
                   className="h-10 rounded-lg bg-card"
                   {...field}
                   value={String(field.value ?? "")}
+                  onBlur={() => {
+                    field.onBlur();
+                    onAddressBlur?.(side);
+                  }}
                   disabled={notRouted}
                 />
               </FormControl>

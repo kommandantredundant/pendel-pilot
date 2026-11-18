@@ -59,7 +59,7 @@ export default function LandingPage() {
           <p className="mt-5 text-lg text-muted-foreground max-w-2xl">{l("hero.lead")}</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link href={configured ? "/towork" : "/settings"}>
+              <Link href={configured ? "/towork" : "/settings#routing"}>
                 {l(configured ? "cta.open" : "cta.setup")}
                 <ArrowRight className="w-4 h-4" />
               </Link>

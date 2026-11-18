@@ -5,6 +5,8 @@ Publishing a GitHub release deploys that version to Cloudflare Pages (see README
 ## Unreleased
 
 - **One choice for the view:** the separate Glance and Planner checkboxes in the settings are replaced by one "View" choice: Classic, Glance or Planner. Phones never offer Planner (it is greyed out). On laptops, desktops and tablets Planner shows from 1024 px window width; in narrower windows (for example a tablet held upright) the classic view appears until the window is wide enough again.
+- **Settings save themselves:** the Save button is gone. Every change is stored after a short pause, addresses as soon as you leave their field (they are looked up then). Next to the title, "Saving…" and "Saved" show what happens; "Not saved: details missing" appears while something required is still empty. A wrong address shows its error right under the field, and everything else keeps saving with the last address that worked. First setup no longer jumps to "To work" on its own.
+- **Settings in a new order:** View, long-distance trains, then Routing. Routing holds home and work and folds away; folded, it shows your two stations. It is open during first setup and when you come from "Set up your commute" on the start page, which now jumps straight there. The "Routes calculated" note with its button moved into this section, and "Recalculate routes" now really looks up both addresses again.
 - **Tidier bottom navigation:** the three entries are evenly spaced whatever the label length, the active entry gets a pill behind its icon, and tapping no longer leaves a frame around it on Android (the focus ring now only shows for keyboard use).
 
 ## 0.3.0
