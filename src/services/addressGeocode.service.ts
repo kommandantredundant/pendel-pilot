@@ -6,6 +6,8 @@ import type { JourneyTelemetrySink } from './journeyCalculation.service.ts';
 export interface AddressGeocodeOptions {
   q: string;
   limit?: number;
+  /** Prefer results near this point, e.g. the station picked for that place. */
+  near?: Coordinates;
   savedProfileAddress?: {
     label?: string;
     coordinates: Coordinates;
@@ -27,7 +29,7 @@ export class AddressGeocodeService {
     }
 
     try {
-      const result = await this.photonClient.geocode(q, limit);
+      const result = await this.photonClient.geocode(q, limit, options.near);
       this.telemetry?.({ event: 'service.fallback_used', metadata: { domain: 'photon', direction: 'read', outcome: 'primary' } });
       return result;
     } catch (error) {

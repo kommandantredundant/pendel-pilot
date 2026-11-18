@@ -15,6 +15,7 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { useDeviceClass } from "@/hooks/use-active-view";
 import { choiceFlags, storedChoice } from "@/lib/view-mode";
 import { cn } from "@/lib/utils";
+import { isAppError } from "@/lib/app-error";
 
 import {
   Form,
@@ -142,15 +143,22 @@ export default function SettingsPage() {
     if (request.force) setRecalculating(true);
     try {
       await saveSettings({ settings: parsed.data, force: request.force });
-      if (request.addressSide) form.clearErrors(SIDE_FIELDS[request.addressSide].address);
+      // A lookup problem is solved once a save gets through (both addresses were checked).
+      for (const side of Object.keys(SIDE_FIELDS) as Side[]) {
+        if (form.getFieldState(SIDE_FIELDS[side].address).error?.type === "lookup") form.clearErrors(SIDE_FIELDS[side].address);
+      }
       setSaveState("saved");
       setSavedCount((count) => count + 1);
     } catch (error) {
       setSaveState("failed");
-      const side = request.addressSide;
+      // Lookup errors name their address field; a failed address of the field just left also restores its last good value.
+      const fieldSide = isAppError(error) && error.field
+        ? (Object.keys(SIDE_FIELDS) as Side[]).find((side) => SIDE_FIELDS[side].address === error.field)
+        : undefined;
+      const side = fieldSide ?? request.addressSide;
       if (side) {
         // Keep saving everything else with the last address that worked; the field keeps the new text and the error.
-        if (committed.current[side] === parsed.data[SIDE_FIELDS[side].address]) {
+        if (side === request.addressSide && committed.current[side] === parsed.data[SIDE_FIELDS[side].address]) {
           committed.current[side] = request.previousAddress ?? "";
         }
         form.setError(SIDE_FIELDS[side].address, { type: "lookup", message: saveErrorMessage(error, languageRef.current) });
@@ -230,6 +238,13 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  /** The stored lookup result, as long as the field still shows the address it belongs to. */
+  const foundAddress = (side: Side): string | undefined => {
+    const typed = String(form.watch(SIDE_FIELDS[side].address) ?? "");
+    const looked = side === "home" ? settings?.routingInputFingerprint?.homeAddress : settings?.routingInputFingerprint?.workAddress;
+    return typed && typed === looked ? (side === "home" ? settings?.homeAddressLabel : settings?.workAddressLabel) : undefined;
+  };
 
   const homeStation = form.watch("homeStationName");
   const workStation = form.watch("workStationName");
@@ -399,8 +414,16 @@ export default function SettingsPage() {
                   </AlertDescription>
                 </Alert>
               )}
-              <SettingsSideSection side="home" form={form} language={language} onAddressBlur={onAddressBlur} />
-              <SettingsSideSection side="work" form={form} language={language} onAddressBlur={onAddressBlur} />
+              {(["home", "work"] as const).map((side) => (
+                <SettingsSideSection
+                  key={side}
+                  side={side}
+                  form={form}
+                  language={language}
+                  onAddressBlur={onAddressBlur}
+                  foundAddress={foundAddress(side)}
+                />
+              ))}
             </CollapsibleContent>
           </Collapsible>
 

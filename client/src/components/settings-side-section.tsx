@@ -34,12 +34,15 @@ export function SettingsSideSection({
   form,
   language,
   onAddressBlur,
+  foundAddress,
 }: {
   side: "home" | "work";
   form: UseFormReturn<SettingsFormValues>;
   language: Language;
   /** Addresses are saved (and looked up) when the field is left, not on every keystroke. */
   onAddressBlur?: (side: "home" | "work") => void;
+  /** What the lookup found for the address as it stands, so a wrong match is visible. */
+  foundAddress?: string;
 }) {
   const fields = SIDE_FIELDS[side];
   const walkFixed = form.watch(fields.walkFixed) === 1;
@@ -76,6 +79,11 @@ export function SettingsSideSection({
                 />
               </FormControl>
               {notRouted && <FormDescription>{t("settings.address.unused", language)}</FormDescription>}
+              {!notRouted && foundAddress && !form.formState.errors[fields.address] && (
+                <FormDescription>
+                  {t("settings.address.found", language)} <span className="text-foreground">{foundAddress}</span>
+                </FormDescription>
+              )}
               <FormMessage />
             </FormItem>
           )}

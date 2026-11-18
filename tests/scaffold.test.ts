@@ -15,6 +15,10 @@ describe('backend scaffold', () => {
     assert.equal(buildTransitousStopSearchUrl('Han').searchParams.get('max'), '55.1,17.2');
     assert.match(buildGeocodeUrl('Alexanderplatz', 3).toString(), /\/api\?q=Alexanderplatz&limit=3/);
     assert.match(
+      buildGeocodeUrl('Alexanderplatz', 1, undefined, { latitude: 52.52, longitude: 13.41 }).toString(),
+      /\/api\?q=Alexanderplatz&limit=1&lat=52\.52&lon=13\.41$/
+    );
+    assert.match(
       buildRouteUrl({ lat: 52.52, lon: 13.405 }, { lat: 52.5, lon: 13.4 }, 'foot').toString(),
       /^https:\/\/routing\.openstreetmap\.de\/routed-foot\/route\/v1\/driving\/13\.405,52\.52;13\.4,52\.5\?overview=false$/
     );
