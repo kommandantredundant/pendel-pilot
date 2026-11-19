@@ -2,6 +2,12 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
+## Unreleased
+
+- **Glance shows a fixed number of connections:** the next connection in the big card plus four in the list, on every load. Before, the list showed whatever the last load had collected, between a handful and fifteen connections depending on the moment, so refreshing could shorten it.
+- **Remembered connection stays:** every load reaches the remembered connection, so refreshing no longer drops it and no longer shows "Remembered connection no longer possible" by mistake. That hint now only appears when the connection was missed, or is missing although its departure time was loaded (connection broken, train cancelled).
+- **Fresh data when you come back:** returning to the app after more than 5 minutes reloads the connections right away.
+
 ## 0.3.0
 
 - **Remember a connection in Glance (#13):** long-press a connection (the big card or a row in "Later connections") to remember it. The big card then follows that connection as "Your connection", with countdown and delays, and its row in the list gets the same blue frame; the list itself stays as it is. Long-press it again to forget it. Once it can no longer be made (missed, connection broken, train cancelled), it is dropped, Glance shows the next connection you can make again, and "Remembered connection no longer possible" appears for 5 minutes. One connection per direction, kept on this device only. Until you have used it once, a line under the list explains the long press; with a keyboard or screen reader, each connection has its own button.

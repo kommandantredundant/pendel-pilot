@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowRight, Bike, Bookmark, ChevronRight, Footprints, Re
 import type { CommuteSuggestion } from "@shared/routes";
 import { useJourneysWithRefresh } from "@/hooks/use-transport";
 import { useSettings } from "@/hooks/use-settings";
-import { useGlancePin } from "@/hooks/use-glance-pin";
+import { rememberedDeparture, useGlancePin } from "@/hooks/use-glance-pin";
 import { useLongPress } from "@/hooks/use-long-press";
 import { ErrorDisplay } from "@/components/error-display";
 import { DepartureTime, LinePill } from "@/components/journey-card";
@@ -54,7 +54,14 @@ const ModeIcon = ({ mode, className }: { mode: TravelMode; className?: string })
 export function DashboardGlance({ destination }: { destination: "work" | "home" }) {
   const { language } = useLanguage();
   const { data: settings } = useSettings();
-  const { data: journeys, isLoading, isError, error, refresh, lastUpdated } = useJourneysWithRefresh(destination);
+  // Every load reaches the remembered connection, so it is always part of what Glance loads.
+  const { data: journeys, isLoading, isError, error, refresh, lastUpdated } = useJourneysWithRefresh(
+    destination,
+    "now",
+    "arrival",
+    "",
+    () => rememberedDeparture(destination)
+  );
   const now = useNow();
   const remembered = useGlancePin(destination);
 

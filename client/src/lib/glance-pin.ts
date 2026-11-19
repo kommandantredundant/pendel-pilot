@@ -10,6 +10,8 @@ export const STALE_PIN_MS = 30 * 60_000;
 /** A connection remembered in Glance, one per direction. */
 export interface GlancePin {
   key: string;
+  /** Planned departure of the first train, ISO 8601: every load has to reach it (see fetchPlanJourneys). */
+  departure?: string;
   /** Latest time you could still leave for it (either mode), ISO 8601; used to drop stale pins silently. */
   lastLeave: string;
 }
@@ -27,14 +29,21 @@ export function pinFor(suggestion: CommuteSuggestion): GlancePin {
   const lastLeave = [suggestion.leaveHomeWalkTime, suggestion.leaveHomeBikeTime].reduce((a, b) =>
     Date.parse(a) >= Date.parse(b) ? a : b
   );
-  return { key: pinKey(suggestion), lastLeave };
+  return { key: pinKey(suggestion), departure: suggestion.journey.legs[0]?.plannedDeparture ?? suggestion.journey.plannedDeparture, lastLeave };
 }
 
 export type PinResolution =
   | { state: "none" }
   | { state: "active"; suggestion: CommuteSuggestion }
-  /** No longer listed (missed connection, cancelled train) or no counted mode can make it any more. */
-  | { state: "lost" };
+  /** Missing although the load covered its departure (connection broken, train cancelled), or missed. */
+  | { state: "lost" }
+  /** Not part of this load (it did not reach that far); kept until a load says more. */
+  | { state: "unknown" };
+
+/** Planned departure of a pin (ISO 8601); pins saved before `departure` existed carry it in their key. */
+export function pinDeparture(pin: GlancePin): string | undefined {
+  return pin.departure ?? pin.key.split("@")[1]?.split(/[>|]/)[0];
+}
 
 export function resolvePin(
   suggestions: CommuteSuggestion[],
@@ -44,7 +53,11 @@ export function resolvePin(
 ): PinResolution {
   if (!pin) return { state: "none" };
   const suggestion = suggestions.find((candidate) => pinKey(candidate) === pin.key);
-  if (!suggestion) return { state: "lost" };
+  if (!suggestion) {
+    const departure = Date.parse(pinDeparture(pin) ?? "");
+    const covered = suggestions.some((candidate) => Date.parse(candidate.journey.departure) >= departure);
+    return covered ? { state: "lost" } : { state: "unknown" };
+  }
   const reachable = countedModes(preference).some((mode) => modeStatus(suggestion, mode, now) !== "missed");
   return reachable ? { state: "active", suggestion } : { state: "lost" };
 }

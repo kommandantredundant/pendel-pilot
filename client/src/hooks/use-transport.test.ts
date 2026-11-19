@@ -323,3 +323,41 @@ test("fetchPlanJourneys does not page for an explicit departure time", async () 
   await fetchPlanJourneys("work", { kind: "departure", time: planAt(0) }, false, 6, () => PLAN_BASE + 60 * 60_000);
   assert.equal(calls, 1);
 });
+
+test("fetchPlanJourneys for 'now' pages on until it reaches a required departure", async () => {
+  (globalThis as any).window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sampleSettings));
+  const pages = [[25, 30, 35], [40, 45, 50], [55, 60, 65], [70, 75, 80]];
+  let calls = 0;
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ success: true, data: { options: pages[calls++].map(optionAt) } }))) as unknown as typeof fetch;
+
+  // Three reachable connections are enough on their own; the required departure at 60 needs two more pages.
+  const list = await fetchPlanJourneys("work", { kind: "now" }, false, 3, () => PLAN_BASE, { through: planAt(60) });
+  assert.equal(calls, 3);
+  assert.ok(list.some((s) => s.journey.lineName === "RE 60"));
+});
+
+test("fetchPlanJourneys without a required departure stops once enough can be made", async () => {
+  (globalThis as any).window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sampleSettings));
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    return new Response(JSON.stringify({ success: true, data: { options: [25, 30, 35].map(optionAt) } }));
+  }) as unknown as typeof fetch;
+
+  await fetchPlanJourneys("work", { kind: "now" }, false, 3, () => PLAN_BASE);
+  assert.equal(calls, 1);
+});
+
+test("fetchPlanJourneys stops paging for a required departure after a fixed number of pages", async () => {
+  (globalThis as any).window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sampleSettings));
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    const minutes = [25, 30, 35].map((m) => m + calls * 15);
+    calls++;
+    return new Response(JSON.stringify({ success: true, data: { options: minutes.map(optionAt) } }));
+  }) as unknown as typeof fetch;
+
+  await fetchPlanJourneys("work", { kind: "now" }, false, 3, () => PLAN_BASE, { through: planAt(24 * 60) });
+  assert.equal(calls, 5); // first page plus at most four more
+});

@@ -12,6 +12,8 @@ export const STATION_SEARCH_MIN_CHARS = 3;
 
 /** Number of connection options requested from /api/journeys/calculate by the classic view and Glance. */
 export const JOURNEY_RESULTS = 5;
+/** Automatic refresh interval of the dashboards; data older than this is reloaded on returning to the app. */
+const REFRESH_MS = 5 * 60_000;
 
 interface ApiStation {
   id: string;
@@ -309,17 +311,22 @@ export function useJourneysWithRefresh(
   destination: "work" | "home",
   timePlanning: "now" | "later" = "now",
   arrivalDeparture: "arrival" | "departure" = "arrival",
-  selectedTime: string = ""
+  selectedTime: string = "",
+  /** Read at fetch time: planned departure the "now" list has to reach (the connection remembered in Glance). */
+  through?: () => string | undefined
 ) {
   const query = useQuery({
     queryKey: ["transport", "journeys", destination, timePlanning, arrivalDeparture, selectedTime],
     // "Now" pages on until enough connections can still be made (see fetchPlanJourneys).
     queryFn: () =>
       timePlanning === "now"
-        ? fetchPlanJourneys(destination, { kind: "now" }, undefined, JOURNEY_RESULTS)
+        ? fetchPlanJourneys(destination, { kind: "now" }, undefined, JOURNEY_RESULTS, Date.now, { through: through?.() })
         : fetchJourneys(destination, timePlanning, arrivalDeparture, selectedTime),
-    refetchInterval: 300000, // 5 minutes
+    refetchInterval: REFRESH_MS,
     refetchIntervalInBackground: false,
+    // No refresh runs while the app is in the background; coming back to it reloads data older than that.
+    staleTime: REFRESH_MS,
+    refetchOnWindowFocus: true,
   });
 
   return {
@@ -331,6 +338,21 @@ export function useJourneysWithRefresh(
 
 /** Extra pages "now" may load to fill the planner with connections that can still be made. */
 const NOW_FILL_PAGES = 2;
+/** Further pages allowed to reach a connection that must be included (see `through`). */
+const THROUGH_EXTRA_PAGES = 2;
+
+export interface PlanFetchOptions {
+  /**
+   * Planned departure (ISO 8601) the list has to reach, e.g. of the connection remembered in Glance, so
+   * that connection is part of every load and not only when the first load happened to page far enough.
+   */
+  through?: string;
+}
+
+/** Latest departure in the list (epoch ms); what a load has covered. */
+export function coveredUntil(suggestions: CommuteSuggestion[]): number {
+  return suggestions.reduce((latest, suggestion) => Math.max(latest, Date.parse(suggestion.journey.departure)), -Infinity);
+}
 
 /**
  * "Now" request for every view. For "now", trains leaving in the next minutes are often out of reach already (you
@@ -343,15 +365,19 @@ export async function fetchPlanJourneys(
   /** Undefined uses the saved preference. */
   excludeLongDistance: boolean | undefined,
   results: number,
-  now: () => number = Date.now
+  now: () => number = Date.now,
+  { through }: PlanFetchOptions = {}
 ): Promise<CommuteSuggestion[]> {
   let list = uniqueConnections(await fetchJourneysAt(destination, anchor, { results, excludeLongDistance }));
   if (anchor.kind !== "now") return list;
 
-  for (let page = 0; page < NOW_FILL_PAGES; page++) {
+  const throughMs = through ? Date.parse(through) : NaN;
+  const pages = Number.isNaN(throughMs) ? NOW_FILL_PAGES : NOW_FILL_PAGES + THROUGH_EXTRA_PAGES;
+  for (let page = 0; page < pages; page++) {
     const reachable = list.filter((suggestion) => reachableBy(suggestion, TRAVEL_MODES, now())).length;
+    const reachedThrough = Number.isNaN(throughMs) || coveredUntil(list) >= throughMs;
     const next = laterAnchor(list);
-    if (reachable >= results || !next) break;
+    if ((reachable >= results && reachedThrough) || !next) break;
     list = uniqueConnections(mergeSuggestions(list, await fetchJourneysAt(destination, next, { results, excludeLongDistance })));
   }
   return list;

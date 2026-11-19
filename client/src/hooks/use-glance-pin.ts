@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CommuteSuggestion } from "@shared/routes";
-import { pinFor, PIN_LOST_HINT_MS, type GlancePin } from "@/lib/glance-pin";
+import { pinDeparture, pinFor, PIN_LOST_HINT_MS, type GlancePin } from "@/lib/glance-pin";
 
 type Direction = "work" | "home";
 
@@ -41,6 +41,12 @@ function write(update: (pins: StoredPins) => StoredPins): void {
 // Fallback when storage is unavailable.
 let memory: StoredPins | undefined;
 const load = (): StoredPins => memory ?? read();
+
+/** Planned departure of the connection remembered for a direction, for the next load to reach. */
+export function rememberedDeparture(direction: Direction): string | undefined {
+  const pin = load()[direction];
+  return pin && pinDeparture(pin);
+}
 
 /** The connection remembered for one direction in Glance, plus the hint state around it. */
 export function useGlancePin(direction: Direction) {
