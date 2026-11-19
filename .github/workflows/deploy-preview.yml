@@ -2,8 +2,9 @@ name: Deploy preview
 
 # Every push to main deploys to the Cloudflare Pages preview branch, a fixed address next to
 # production: https://preview.<project>.pages.dev (e.g. preview.pendel-pilot.pages.dev).
-# A manual run (Actions → Deploy preview → Run workflow) deploys the selected branch there,
-# to try out a feature branch on a phone before it is merged.
+# A manual run (Actions → Deploy preview → Run workflow) deploys the selected branch to its own
+# address, https://<branch>.<project>.pages.dev, to try it on a phone before it is merged. It no
+# longer shares the preview address, so a push to main does not overwrite it (and vice versa).
 # Production is untouched: it is only deployed by publishing a release (deploy-production.yml).
 on:
   push:
@@ -15,7 +16,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: preview-deploy
+  # One queue per target address.
+  group: preview-deploy-${{ github.ref_name }}
   # Only the newest push matters for the preview.
   cancel-in-progress: true
 
@@ -65,13 +67,21 @@ jobs:
         env:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message || format('Manual preview of {0}', github.ref_name) }}
         run: |
+          # main goes to the shared preview address; any other branch to an address of its own.
+          # Cloudflare turns the branch name into the subdomain; keep it to what that allows.
+          target=preview
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            target=$(printf '%s' "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//' | cut -c1-28 | sed -E 's/-+$//')
+            # Never the production branch or an empty name.
+            if [ -z "$target" ] || [ "$target" = "main" ]; then target=preview; fi
+          fi
           $WRANGLER pages deploy dist \
             --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME" \
-            --branch preview \
+            --branch "$target" \
             --commit-hash "$GITHUB_SHA" \
             --commit-message "$(printf '%s' "$COMMIT_MESSAGE" | head -n 1)"
           {
             echo "### Preview deployed"
             echo ""
-            echo "Branch \`$GITHUB_REF_NAME\` at \`${GITHUB_SHA::7}\`: https://preview.$CLOUDFLARE_PAGES_PROJECT_NAME.pages.dev"
+            echo "Branch \`$GITHUB_REF_NAME\` at \`${GITHUB_SHA::7}\`: https://$target.$CLOUDFLARE_PAGES_PROJECT_NAME.pages.dev"
           } >> "$GITHUB_STEP_SUMMARY"
