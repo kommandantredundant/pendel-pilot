@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { geocodeAddress } from "./geocoding-service";
+import { formatAddressLabel, geocodeAddress } from "./geocoding-service";
 import { AppError, ErrorType, isAppError } from "./app-error";
 
 const originalFetch = globalThis.fetch;
@@ -33,7 +33,7 @@ test("geocodeAddress returns the first candidate's coordinates from /api/address
 
   const result = await geocodeAddress("Berlin Hauptbahnhof");
 
-  assert.deepEqual(result, { lat: 52.525, lon: 13.369 });
+  assert.deepEqual(result, { lat: 52.525, lon: 13.369, label: "Berlin Hauptbahnhof" });
   assert.match(requested, /^\/api\/addresses\/geocode\?q=Berlin\+Hauptbahnhof&limit=1$/);
 });
 
@@ -73,7 +73,7 @@ test("geocodeAddress succeeds when the retry after an upstream failure works", a
       ? new Response(JSON.stringify({ success: false, error: { code: "UPSTREAM_UNAVAILABLE", message: "timed out" } }), { status: 504 })
       : new Response(JSON.stringify({ success: true, data: [{ name: "Domplatz", coordinates: { latitude: 51.96, longitude: 7.62 } }] }));
   }) as typeof fetch;
-  assert.deepEqual(await geocodeAddress("Domplatz 10, Münster", 0), { lat: 51.96, lon: 7.62 });
+  assert.deepEqual(await geocodeAddress("Domplatz 10, Münster", 0), { lat: 51.96, lon: 7.62, label: "Domplatz" });
   assert.equal(calls, 2);
 });
 
@@ -85,4 +85,29 @@ test("geocodeAddress does not retry when the address is simply not found", async
   }) as typeof fetch;
   await assert.rejects(() => geocodeAddress("Nowhere", 0), rejectsWith(ErrorType.GEOCODING_NOT_FOUND));
   assert.equal(calls, 1);
+});
+
+test("geocodeAddress sends the bias point when given", async () => {
+  let requested = "";
+  globalThis.fetch = (async (input: string) => {
+    requested = input;
+    return new Response(JSON.stringify({ success: true, data: [{ name: "X", coordinates: { latitude: 1, longitude: 2 } }] }));
+  }) as unknown as typeof fetch;
+
+  await geocodeAddress("Hauptstraße 1", 0, { lat: 52.5, lon: 13.4 });
+
+  assert.match(requested, /[?&]lat=52\.5&lon=13\.4$/);
+});
+
+test("formatAddressLabel shows street, house number, postcode and town, and the country only abroad", () => {
+  const coordinates = { latitude: 0, longitude: 0 };
+  assert.equal(
+    formatAddressLabel({ name: "Berliner Schloss", street: "Schloßplatz", housenumber: "1", postcode: "10178", city: "Berlin", countrycode: "DE", country: "Deutschland", coordinates }),
+    "Schloßplatz 1, 10178 Berlin",
+  );
+  assert.equal(
+    formatAddressLabel({ name: "Kehkeh", country: "Liberia", countrycode: "LR", coordinates }),
+    "Kehkeh, Liberia",
+  );
+  assert.equal(formatAddressLabel({ name: "Berlin", city: "Berlin", countrycode: "DE", coordinates }), "Berlin");
 });

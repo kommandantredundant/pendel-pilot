@@ -7,8 +7,9 @@
 @layer utilities {
   /* Safe areas (notch, rounded corners, gesture bar); 0 unless the page draws edge-to-edge. */
   .pt-safe-top { padding-top: var(--safe-top); }
-  /* Bottom navigation: its bottom padding grows into the gesture bar instead of adding to it. */
-  .pb-safe-nav { padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); }
+  /* Bottom navigation: its bottom padding grows into the gesture bar instead of adding to it.
+     The minimum matches the space above the icons (pt-2), so label and pill sit evenly. */
+  .pb-safe-nav { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
 
   /* Immersive browsers (display-mode: fullscreen, e.g. Chrome on Android) hide the status bar but
      still report its full height as the top inset (66px measured), and report 0 at the bottom

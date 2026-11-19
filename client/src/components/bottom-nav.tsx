@@ -112,15 +112,16 @@ export function BottomNav() {
         border-t border-border/70
         transition-transform duration-300 ease-in-out
         ${isKeyboardVisible ? "translate-y-full" : "translate-y-0"}
-        md:bottom-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-auto md:min-w-[400px]
+        md:bottom-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[420px]
         md:rounded-2xl md:border md:shadow-lg
       `}
       role="navigation"
       aria-label="Main navigation"
       data-bottom-nav
     >
-      {/* Bottom padding grows into the safe area (gesture bar / home indicator) instead of adding to it. */}
-      <div className="flex items-center justify-around px-[max(0.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pt-1 pb-safe-nav md:py-3">
+      {/* Bottom padding grows into the safe area (gesture bar / home indicator) instead of adding to it.
+          Three equal columns keep the icons evenly spaced whatever the label length. */}
+      <div className="grid grid-cols-3 px-[max(0.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pt-2 pb-safe-nav md:px-3 md:py-2.5">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
           const Icon = item.icon;
@@ -130,34 +131,25 @@ export function BottomNav() {
               key={item.path}
               href={getHref(item.path)}
               className={`
-                flex flex-col items-center justify-center
-                min-w-[64px] px-3 py-1.5 md:py-2 rounded-xl
-                transition-all duration-200 ease-in-out
-                ${isActive
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                }
-                focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                focus:ring-offset-background
+                group flex flex-col items-center justify-center gap-1 py-1 rounded-xl
+                transition-colors duration-200 ease-in-out
+                ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
               `}
               aria-label={item.ariaLabel}
               aria-current={isActive ? "page" : undefined}
             >
-              <Icon
-                className={`
-                  w-5 h-5 md:w-6 md:h-6
-                  transition-transform duration-200
-                  ${isActive ? "scale-110" : "scale-100"}
-                `}
-                aria-hidden="true"
-              />
+              {/* Material-style indicator: a fixed-size pill behind the icon only. */}
               <span
                 className={`
-                  text-[10px] md:text-xs font-medium mt-1
-                  transition-all duration-200
-                  ${isActive ? "font-semibold" : "font-normal"}
+                  flex items-center justify-center w-14 h-8 rounded-full
+                  transition-colors duration-200
+                  ${isActive ? "bg-primary/15 text-primary" : "group-hover:bg-muted/50"}
                 `}
               >
+                <Icon className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <span className={`text-xs leading-none ${isActive ? "font-semibold" : "font-medium"}`}>
                 {t(item.labelKey, language)}
               </span>
             </Link>
