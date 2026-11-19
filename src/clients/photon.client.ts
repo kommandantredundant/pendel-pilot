@@ -3,6 +3,9 @@ import { requestProviderJson } from './providerCompliance.ts';
 
 export interface AddressGeocodeResult {
   name: string;
+  street?: string;
+  housenumber?: string;
+  postcode?: string;
   city?: string;
   state?: string;
   country?: string;
@@ -11,11 +14,12 @@ export interface AddressGeocodeResult {
 }
 
 export interface PhotonClient {
-  geocode(q: string, limit: number): Promise<AddressGeocodeResult[]>;
+  /** `near` prefers results close to that point (Photon location bias); it does not exclude far ones. */
+  geocode(q: string, limit: number, near?: Coordinates): Promise<AddressGeocodeResult[]>;
 }
 
 export class StubPhotonClient implements PhotonClient {
-  async geocode(_q: string, _limit: number): Promise<AddressGeocodeResult[]> {
+  async geocode(_q: string, _limit: number, _near?: Coordinates): Promise<AddressGeocodeResult[]> {
     return [];
   }
 }
@@ -25,10 +29,10 @@ export class HttpPhotonClient implements PhotonClient {
     private readonly options: { baseUrl?: string; fetchImpl?: typeof fetch } = {}
   ) {}
 
-  async geocode(q: string, limit: number): Promise<AddressGeocodeResult[]> {
+  async geocode(q: string, limit: number, near?: Coordinates): Promise<AddressGeocodeResult[]> {
     const payload = await requestProviderJson<unknown>({
       provider: 'photon',
-      url: buildGeocodeUrl(q, limit, this.options.baseUrl),
+      url: buildGeocodeUrl(q, limit, this.options.baseUrl, near),
       fetchImpl: this.options.fetchImpl
     });
 
@@ -40,10 +44,14 @@ export class HttpPhotonClient implements PhotonClient {
   }
 }
 
-export function buildGeocodeUrl(q: string, limit: number, baseUrl = 'https://photon.komoot.io'): URL {
+export function buildGeocodeUrl(q: string, limit: number, baseUrl = 'https://photon.komoot.io', near?: Coordinates): URL {
   const url = new URL('/api', baseUrl);
   url.searchParams.set('q', q);
   url.searchParams.set('limit', String(limit));
+  if (near) {
+    url.searchParams.set('lat', String(near.latitude));
+    url.searchParams.set('lon', String(near.longitude));
+  }
   return url;
 }
 
@@ -64,6 +72,9 @@ function mapFeature(feature: unknown): AddressGeocodeResult | null {
 
   return {
     name,
+    ...(typeof feature.properties.street === 'string' ? { street: feature.properties.street } : {}),
+    ...(typeof feature.properties.housenumber === 'string' ? { housenumber: feature.properties.housenumber } : {}),
+    ...(typeof feature.properties.postcode === 'string' ? { postcode: feature.properties.postcode } : {}),
     ...(typeof feature.properties.city === 'string' ? { city: feature.properties.city } : {}),
     ...(typeof feature.properties.state === 'string' ? { state: feature.properties.state } : {}),
     ...(typeof feature.properties.country === 'string' ? { country: feature.properties.country } : {}),

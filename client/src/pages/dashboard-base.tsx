@@ -132,7 +132,7 @@ export function DashboardBase({ destination }: DashboardBaseProps) {
         <p className="text-muted-foreground max-w-sm">
           {t('dashboard.setup.desc', language)}
         </p>
-        <Link href="/settings">
+        <Link href="/settings#routing">
           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <SettingsIcon className="w-4 h-4 mr-2" />
             {t('dashboard.configure', language)}

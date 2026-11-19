@@ -122,6 +122,26 @@ describe('provider clients', () => {
     assert.deepEqual(repeated, { durationSec: 300, distanceMeters: 900 });
   });
 
+  it('keeps street, house number and postcode so the client can show what was found', async () => {
+    const client = new HttpPhotonClient({
+      fetchImpl: jsonFetch({
+        features: [
+          {
+            properties: { name: 'Berliner Schloss', street: 'Schloßplatz', housenumber: '1', postcode: '10178', city: 'Berlin', countrycode: 'DE' },
+            geometry: { coordinates: [13.4007, 52.5172] }
+          }
+        ]
+      })
+    });
+
+    const [result] = await client.geocode('Musterstraße 1, Berlin', 1);
+
+    assert.equal(result.street, 'Schloßplatz');
+    assert.equal(result.housenumber, '1');
+    assert.equal(result.postcode, '10178');
+    assert.equal(result.city, 'Berlin');
+  });
+
   it('maps Photon features only into address geocode fields', async () => {
     const client = new HttpPhotonClient({
       fetchImpl: jsonFetch({
@@ -216,6 +236,32 @@ describe('provider clients', () => {
 });
 
 describe('provider failures at the API boundary', () => {
+  it('passes a valid bias point from the endpoint to Photon and ignores a broken one', async () => {
+    const { onRequestGet } = await import('../functions/api/addresses/geocode.ts');
+    const originalFetch = globalThis.fetch;
+    const requested: string[] = [];
+    globalThis.fetch = (async (input: string | URL) => {
+      requested.push(String(input));
+      return new Response(JSON.stringify({ features: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const call = (query: string) =>
+      (onRequestGet as unknown as (context: { request: Request }) => Promise<Response>)({
+        request: new Request(`https://example.test/api/addresses/geocode?${query}`)
+      });
+    try {
+      await call('q=Hauptstra%C3%9Fe%201&limit=1&lat=52.525&lon=13.369');
+      await call('q=Hauptstra%C3%9Fe%201&limit=1&lat=abc&lon=13.369');
+      const biased = new URL(requested[0]);
+      assert.equal(biased.searchParams.get('lat'), '52.525');
+      assert.equal(biased.searchParams.get('lon'), '13.369');
+      const unbiased = new URL(requested[1]);
+      assert.equal(unbiased.searchParams.has('lat'), false);
+      assert.equal(unbiased.searchParams.has('lon'), false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('answers a failing Photon lookup with a 503 envelope naming the cause instead of a bare 500', async () => {
     const { onRequestGet } = await import('../functions/api/addresses/geocode.ts');
     const originalFetch = globalThis.fetch;

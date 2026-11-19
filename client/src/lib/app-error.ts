@@ -30,6 +30,7 @@ export enum ErrorType {
   GEOCODING_NOT_FOUND = 'geocoding-not-found',
   GEOCODING_RATE_LIMIT = 'geocoding-rate-limit',
   GEOCODING_INVALID_RESPONSE = 'geocoding-invalid-response',
+  GEOCODING_TOO_FAR = 'geocoding-too-far',
   
   // OSRM routing errors
   OSRM_NETWORK = 'osrm-network',
@@ -65,6 +66,9 @@ export interface AppErrorOptions {
   
   /** Original error that caused this (for debugging) */
   cause?: unknown;
+
+  /** Settings form field this error belongs to, e.g. "homeAddress"; shown there instead of at the top. */
+  field?: string;
 }
 
 /**
@@ -96,6 +100,9 @@ export class AppError extends Error {
   /** Original error that caused this (for debugging) */
   readonly cause?: unknown;
 
+  /** Settings form field this error belongs to, if any. */
+  readonly field?: string;
+
   constructor(type: ErrorType, options: AppErrorOptions) {
     super(type);
     this.name = 'AppError';
@@ -110,6 +117,18 @@ export class AppError extends Error {
     this.fixRoute = options.fixRoute;
     this.fixLabelKey = options.fixLabel ? `error.${type}.fixLabel` : undefined;
     this.cause = options.cause;
+    this.field = options.field;
+  }
+
+  /** The same error, attributed to a settings form field. */
+  forField(field: string): AppError {
+    return new AppError(this.type, {
+      responsibility: this.responsibility,
+      fixRoute: this.fixRoute,
+      fixLabel: this.fixLabelKey,
+      cause: this.cause,
+      field,
+    });
   }
 
   /**
@@ -168,6 +187,14 @@ export class ErrorFactory {
 
   static geocodingNotFound(cause?: unknown): AppError {
     return new AppError(ErrorType.GEOCODING_NOT_FOUND, {
+      responsibility: ErrorResponsibility.USER,
+      cause,
+    });
+  }
+
+  /** The best match lies implausibly far from the station picked for that place. */
+  static geocodingTooFar(cause?: unknown): AppError {
+    return new AppError(ErrorType.GEOCODING_TOO_FAR, {
       responsibility: ErrorResponsibility.USER,
       cause,
     });

@@ -68,6 +68,9 @@ export const settingsObjectSchema = z.object({
     homeAddress: z.string(),
     workAddress: z.string(),
   }).optional(),
+  // What the address lookup found for homeAddress/workAddress (e.g. "Schloßplatz 1, 10178 Berlin"), shown in settings.
+  homeAddressLabel: z.string().optional(),
+  workAddressLabel: z.string().optional(),
 });
 
 export type Side = "home" | "work";
