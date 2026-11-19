@@ -9,6 +9,9 @@ export type ModeStatus = "ok" | "hurry" | "missed";
 
 export const TRAVEL_MODES: TravelMode[] = ["walk", "bike"];
 
+/** Connections listed under the big card: Glance always shows the next one plus this many. */
+export const GLANCE_LATER_ROWS = 4;
+
 /** Share of the routing time you can still make up by hurrying. */
 export const HURRY_FRACTION = 0.1;
 
@@ -17,7 +20,7 @@ export interface GlanceSelection {
   next?: CommuteSuggestion;
   /** An earlier connection only the other mode can still make (single-mode preference only). */
   alternative?: CommuteSuggestion;
-  /** Connections after `next`. */
+  /** Connections after `next`, at most {@link GLANCE_LATER_ROWS}. */
   later: CommuteSuggestion[];
   /** Connections passed over because no counted-down mode can make them any more. */
   missedCount: number;
@@ -78,7 +81,7 @@ export function selectGlance(suggestions: CommuteSuggestion[], preference: ModeP
   return {
     next,
     alternative,
-    later: nextIndex === -1 ? [] : suggestions.slice(nextIndex + 1),
+    later: nextIndex === -1 ? [] : suggestions.slice(nextIndex + 1, nextIndex + 1 + GLANCE_LATER_ROWS),
     missedCount: before.filter((suggestion) => suggestion !== alternative).length,
   };
 }

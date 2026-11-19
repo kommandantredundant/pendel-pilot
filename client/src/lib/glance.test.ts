@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { CommuteSuggestion } from "@shared/routes";
-import { minutesOverdue, minutesUntil, modeStatus, selectGlance, urgencyFor } from "./glance";
+import { GLANCE_LATER_ROWS, minutesOverdue, minutesUntil, modeStatus, selectGlance, urgencyFor } from "./glance";
 
 const NOW = Date.parse("2026-04-10T07:00:00.000Z");
 const at = (minutes: number) => new Date(NOW + minutes * 60_000).toISOString();
@@ -89,4 +89,12 @@ test("selectGlance with a spontaneous choice takes the first connection either m
   assert.equal(both.alternative, undefined);
   assert.equal(both.missedCount, 1);
   assert.deepEqual(both.later.map((s) => s.journey.lineName), ["RE3"]);
+});
+
+test("selectGlance always lists at most a fixed number of later connections", () => {
+  const many = Array.from({ length: 10 }, (_, i) => suggestion(`RE${i}`, 5 + i * 10, 15 + i * 10));
+  const result = selectGlance(many, "both", NOW);
+  assert.equal(result.next?.journey.lineName, "RE0");
+  assert.equal(result.later.length, GLANCE_LATER_ROWS);
+  assert.deepEqual(result.later.map((s) => s.journey.lineName), ["RE1", "RE2", "RE3", "RE4"]);
 });

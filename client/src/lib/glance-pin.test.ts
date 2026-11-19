@@ -51,9 +51,22 @@ test("resolvePin finds the remembered connection, also after a delay", () => {
   assert.equal(result.state === "active" && result.suggestion, delayed);
 });
 
-test("resolvePin reports a connection that is no longer listed as lost", () => {
+test("resolvePin reports a connection missing from a load that covered its departure as lost", () => {
   const pin = pinFor(suggestion("RE2", 5, 15));
-  assert.deepEqual(resolvePin([suggestion("RB89", 1, 10)], pin, "both", NOW), { state: "lost" });
+  const loaded = [suggestion("RB89", 1, 10), suggestion("RE42", 20, 30)];
+  assert.deepEqual(resolvePin(loaded, pin, "both", NOW), { state: "lost" });
+});
+
+test("resolvePin keeps a connection the load did not reach as unknown, not lost", () => {
+  const pin = pinFor(suggestion("RE2", 5, 15));
+  assert.deepEqual(resolvePin([suggestion("RB89", 1, 10)], pin, "both", NOW), { state: "unknown" });
+});
+
+test("pins saved without a departure still resolve, from their key", () => {
+  const { departure, ...old } = pinFor(suggestion("RE2", 5, 15));
+  assert.ok(departure);
+  assert.deepEqual(resolvePin([suggestion("RB89", 1, 10)], old, "both", NOW), { state: "unknown" });
+  assert.equal(resolvePin([suggestion("RE2", 5, 15)], old, "both", NOW).state, "active");
 });
 
 test("resolvePin reports a connection no counted mode can make any more as lost", () => {
