@@ -2,7 +2,7 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
-## Unreleased
+## 0.4.0
 
 - **Access by invitation (optional):** with the secret `ADMIN_CODE` set, Pendel-Pilot opens only for invited people, without user accounts. In Settings → "Share access" (only visible to the admin) you invite someone by name, optionally for 1 month or 1 year; they scan the QR code or open the shared link and are in for good. The list shows who is invited and when they last used the app; "Revoke" locks someone out within a minute. Without `ADMIN_CODE` nothing changes. Setup: README, "Access by invitation".
 - **One choice for the view:** the separate Glance and Planner checkboxes in the settings are replaced by one "View" choice: Classic, Glance or Planner. Phones never offer Planner (it is greyed out). On laptops, desktops and tablets Planner shows from 1024 px window width; in narrower windows (for example a tablet held upright) the classic view appears until the window is wide enough again.
