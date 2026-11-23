@@ -3,3 +3,10 @@
 name = "pendel-pilot"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-07-06"
+
+# Access by invitation (README, "Access by invitation"): the KV namespace that holds the invitations.
+# Create it once with `npx wrangler@4.107.0 kv namespace create pendel-pilot-access`, put the printed id
+# below and remove the comment signs. While this file exists, bindings set in the Cloudflare dashboard are ignored.
+# [[kv_namespaces]]
+# binding = "ACCESS"
+# id = "<id of pendel-pilot-access>"

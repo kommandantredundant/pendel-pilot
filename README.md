@@ -71,6 +71,22 @@ Publishing a GitHub release runs the workflow `Deploy production` (`.github/work
 
 Every push to `main` runs the workflow `Deploy preview` (`.github/workflows/deploy-preview.yml`): it runs `npm run check` and deploys to the Cloudflare Pages branch `preview`, reachable at `https://preview.pendel-pilot.pages.dev`. To try a feature branch before merging, run the workflow by hand (Actions → Deploy preview → Run workflow) and pick the branch: it is deployed to an address of its own, `https://<branch>.pendel-pilot.pages.dev` (lower case, other characters as `-`, at most 28 characters; the run summary shows the address), so pushes to `main` do not overwrite it. Production stays untouched; it uses the same secrets. Preview builds (`VITE_PREVIEW=1`, also `npm run dev`) include a safe-area diagnostic for testing on different screens: tap "Pendel-Pilot" in the title bar five times. Production builds leave it out.
 
+### Access by invitation
+
+Pendel-Pilot can be limited to invited people without user accounts. It is off until the secret `ADMIN_CODE` is set; then every page and `/api` route needs an invitation (`functions/_middleware.ts`, logic in `src/access/`). Scripts, styles, icons and the web app manifest stay public.
+
+**One-time setup**
+
+1. Create the KV namespace for the invitations: `npx wrangler@4.107.0 kv namespace create pendel-pilot-access`. Put the printed id into the commented `[[kv_namespaces]]` block in `wrangler.toml` and remove the comment signs (with a `wrangler.toml`, bindings set in the dashboard are ignored).
+2. Set your admin code as a secret, a long random one (e.g. `openssl rand -base64 24`): `npx wrangler@4.107.0 pages secret put ADMIN_CODE --project-name pendel-pilot`. Add `--env preview` to protect the preview addresses too; without it they stay open.
+3. Deploy. Open the site, enter the admin code once; you land in Settings, where the section "Share access" appears (only for you).
+
+**Inviting someone:** Settings → Share access → enter a name (optionally a validity of 1 month or 1 year) → Invite. Let them scan the QR code or share the link (`/join/<code>`). Opening it sets a cookie for 400 days, renewed while the app is used. The code is shown only then; the server keeps only its SHA-256 hash.
+
+**Revoking:** tap "Revoke" next to the name. It takes effect within about a minute (KV edge cache). Changing `ADMIN_CODE` logs the admin out everywhere; guests keep their access.
+
+Locally: put `ADMIN_CODE=...` into `.dev.vars` and run `npx wrangler@4.107.0 pages dev dist --kv ACCESS` (or uncomment the KV block).
+
 ## Contributing
 
 Contributions are welcome — bug reports, ideas, and pull requests alike.
