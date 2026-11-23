@@ -81,7 +81,7 @@ Pendel-Pilot can be limited to invited people without user accounts. It is off u
 2. Set your admin code as a secret, a long random one (e.g. `openssl rand -base64 24`): `npx wrangler@4.107.0 pages secret put ADMIN_CODE --project-name pendel-pilot`. Add `--env preview` to protect the preview addresses too; without it they stay open.
 3. Deploy. Open the site, enter the admin code once; you land in Settings, where the section "Share access" appears (only for you).
 
-**Inviting someone:** Settings → Share access → enter a name (optionally a validity of 1 month or 1 year) → Invite. Let them scan the QR code or share the link (`/join/<code>`). Opening it sets a cookie for 400 days, renewed while the app is used. The code is shown only then; the server keeps only its SHA-256 hash.
+**Inviting someone:** Settings → Share access → enter a name (optionally a validity of 1 month or 1 year) → Invite. Let them scan the QR code or share the link (`/join/<code>`). One link works on all of their devices: opening it once per browser sets a cookie for 400 days, renewed while the app is used. An installed web app may keep its own cookies (iPhone home screen); there they paste the link into the code page. The code is shown only then; the server keeps only its SHA-256 hash.
 
 **Revoking:** tap "Revoke" next to the name. It takes effect within about a minute (KV edge cache). Changing `ADMIN_CODE` logs the admin out everywhere; guests keep their access.
 

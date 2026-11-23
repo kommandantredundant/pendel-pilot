@@ -7,8 +7,9 @@ const TEXT = {
     lang: 'de',
     title: 'Pendel-Pilot',
     lead: 'Pendel-Pilot ist im Moment nur mit Einladung nutzbar.',
-    how: 'Öffne den Link oder scanne den QR-Code, den du bekommen hast. Oder gib hier deinen Zugangscode ein:',
-    label: 'Zugangscode',
+    how: 'Öffne den Link oder scanne den QR-Code, den du bekommen hast.',
+    devices: 'Du brauchst keinen eigenen Code pro Gerät: Derselbe Link gilt für alle deine Geräte, öffne ihn einfach auf jedem einmal. Landest du hier in der installierten App (Home-Bildschirm), füge den Link unten ins Feld ein.',
+    label: 'Zugangscode oder Link',
     submit: 'Weiter',
     invalid: 'Dieser Code gilt nicht (mehr). Bitte frag nach einem neuen Link.',
     unavailable: 'Die Zugangsprüfung ist gerade nicht eingerichtet. Bitte versuch es später noch einmal.'
@@ -17,8 +18,9 @@ const TEXT = {
     lang: 'en',
     title: 'Pendel-Pilot',
     lead: 'Pendel-Pilot is invitation-only for now.',
-    how: 'Open the link or scan the QR code you were given. Or enter your access code here:',
-    label: 'Access code',
+    how: 'Open the link or scan the QR code you were given.',
+    devices: 'You do not need a code per device: the same link works on all your devices, just open it once on each. If you land here in the installed app (home screen), paste the link into the field below.',
+    label: 'Access code or link',
     submit: 'Continue',
     invalid: 'This code is not (or no longer) valid. Please ask for a new link.',
     unavailable: 'Access checking is not set up right now. Please try again later.'
@@ -66,6 +68,7 @@ button{margin-top:14px;width:100%;font:inherit;font-weight:600;padding:10px 12px
 <h1><img src="/favicon.svg" alt="">${text.title}</h1>
 <p class="lead">${text.lead}</p>
 <p>${text.how}</p>
+<p>${text.devices}</p>
 ${error}
 <form method="post" action="${JOIN_PATH}">
 <label for="code">${text.label}</label>
