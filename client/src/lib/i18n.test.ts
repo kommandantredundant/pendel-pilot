@@ -24,3 +24,10 @@ test("every landing text exists in English and German", () => {
   assert.ok(en.length > 0);
   assert.deepEqual([...de].sort(), [...en].sort());
 });
+
+test("every access text exists in English and German", () => {
+  const en = Object.keys(translations.en).filter((key) => key.startsWith("access."));
+  const de = Object.keys(translations.de).filter((key) => key.startsWith("access."));
+  assert.ok(en.length > 0);
+  assert.deepEqual([...de].sort(), [...en].sort());
+});

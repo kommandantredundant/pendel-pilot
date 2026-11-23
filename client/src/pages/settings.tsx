@@ -16,6 +16,9 @@ import { useDeviceClass } from "@/hooks/use-active-view";
 import { choiceFlags, storedChoice } from "@/lib/view-mode";
 import { cn } from "@/lib/utils";
 import { isAppError } from "@/lib/app-error";
+import { useQuery } from "@tanstack/react-query";
+import { ACCESS_ME_KEY, fetchAccessMe } from "@/lib/access-client";
+import { ACCESS_HASH, AccessShareSection } from "@/components/access-share-section";
 
 import {
   Form,
@@ -69,6 +72,9 @@ export default function SettingsPage() {
   const { mutateAsync: saveSettings } = useSaveSettings();
   const storageAvailable = isStorageAvailable();
   const { mobile, wide } = useDeviceClass();
+  // Only the admin sees "Share access"; on an open site or for guests the section does not exist.
+  const { data: accessMe } = useQuery({ queryKey: ACCESS_ME_KEY, queryFn: fetchAccessMe });
+  const isAdmin = accessMe?.role === "admin";
 
   const [saveState, setSaveState] = useState<SaveState>("idle");
   // Bumped on every successful save, so "Saved" stays visible for its full time after each one.
@@ -194,6 +200,12 @@ export default function SettingsPage() {
     if (!routingOpen || window.location.hash !== ROUTING_HASH) return;
     requestAnimationFrame(() => document.getElementById("routing")?.scrollIntoView({ block: "start" }));
   }, [routingOpen]);
+
+  // Arriving as admin via ACCESS_HASH (right after entering the admin code): scroll to "Share access".
+  useEffect(() => {
+    if (!isAdmin || isLoading || window.location.hash !== ACCESS_HASH) return;
+    requestAnimationFrame(() => document.getElementById("access")?.scrollIntoView({ block: "start" }));
+  }, [isAdmin, isLoading]);
 
   // Save every change after a short pause; addresses save when their field is left (onAddressBlur).
   useEffect(() => {
@@ -429,6 +441,13 @@ export default function SettingsPage() {
 
         </form>
       </Form>
+
+      {/* Outside the settings form: it has a form of its own and nothing in it is part of the profile. */}
+      {isAdmin && (
+        <div className="mt-4">
+          <AccessShareSection language={language} />
+        </div>
+      )}
     </div>
   );
 }

@@ -71,6 +71,24 @@ The React UI keeps everything in `localStorage`; there is no other browser state
 
 Journeys are not stored in the browser; each view asks `/api/journeys/calculate` again. Walk and bike durations are cached by the backend (see "Providers and resilience").
 
+## Access by invitation
+
+Optional and off until the secret `ADMIN_CODE` is set. `functions/_middleware.ts` runs `accessGate` (`src/access/gate.ts`) on every request:
+
+- `/join/<code>` (link or QR code) and `POST /join` (the code form, which also accepts a pasted link) set the `HttpOnly` cookie `pp_access` for 400 days and redirect: guests to `/`, the admin (who enters `ADMIN_CODE`) to `/settings#access`.
+- Pages and `/api/*` need a valid cookie; without one, pages show a self-contained code page (`src/access/loginPage.ts`) and `/api` answers 401 `ACCESS_REQUIRED`, upon which the UI goes to `/join`. Other static files stay public.
+- Invitations live in the KV namespace bound as `ACCESS` (`src/access/store.ts`): `grant:<id>` holds name, dates and the SHA-256 of the code's secret part (the code is `<id>.<secret>`, shown only once); `seen:<id>` holds the last use, written at most once a day per device (cookie `pp_seen`), kept apart so a late write cannot revive a revoked invitation. Invitations are read with a 60 s edge cache, so revoking takes up to a minute. Expired invitations are refused and removed by KV.
+- The admin cookie holds a hash of `ADMIN_CODE`; changing it logs the admin out.
+
+| Endpoint | Who | Result |
+| --- | --- | --- |
+| `GET /api/access/me` | anyone | `{ enabled, role: 'admin' \| 'guest' \| null, name? }` |
+| `GET /api/access/grants` | admin | invitations that still work, newest first (`id`, `name`, `createdAt`, `expiresAt`, `lastUsedAt`) |
+| `POST /api/access/grants` | admin | `{ name (1–40), validDays? (1–3650 or null) }` → `{ grant, code, link }` |
+| `DELETE /api/access/grants/:id` | admin | revokes it |
+
+The UI shows "Share access" (`client/src/components/access-share-section.tsx`) in Settings for the admin only: invite by name, QR code (`client/src/lib/qr.ts`) and share/copy, list with revoke.
+
 ## Operations
 
 Cloudflare Pages serves `dist/` (the built UI) and maps `functions/api/**` to API routes. Keep `wrangler.toml` aligned with the Pages project; it pins the project name, output directory, and compatibility date. CI and the production workflow run `npm run check` before deployment. For a timeout, identify the provider, check its rate/status, confirm the permitted cache fallback, then lower request rates or disable high-volume features if necessary. For a policy change, verify the provider’s published terms, update code/configuration and attribution, and restrict non-compliant behavior until fixed.

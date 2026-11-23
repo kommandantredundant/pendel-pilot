@@ -1,4 +1,5 @@
 import { AppError, ErrorFactory } from "./app-error";
+import { redirectToJoin } from "./access-client";
 
 /**
  * Thin client for the Pages Functions under /api.
@@ -47,6 +48,7 @@ async function request<T>(path: string, init: RequestInit, domain: ApiDomain): P
 
   // Non-envelope bodies (e.g. a platform error page) still map by HTTP status.
   const failure = envelope && envelope.success === false && envelope.error ? envelope.error : undefined;
+  if (failure?.code === "ACCESS_REQUIRED") redirectToJoin();
   const status = response.ok && !failure ? 502 : response.status;
   throw toAppError(domain, new ApiRequestError(status, failure?.code ?? `HTTP_${response.status}`, failure?.message ?? response.statusText));
 }
