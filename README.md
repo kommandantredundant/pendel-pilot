@@ -77,7 +77,7 @@ Pendel-Pilot can be limited to invited people without user accounts. It is off u
 
 **One-time setup**
 
-1. Create the KV namespace for the invitations: `npx wrangler@4.107.0 kv namespace create pendel-pilot-access`. Put the printed id into the commented `[[kv_namespaces]]` block in `wrangler.toml` and remove the comment signs (with a `wrangler.toml`, bindings set in the dashboard are ignored).
+1. The KV namespace for the invitations is bound as `ACCESS` in `wrangler.toml`. The id there belongs to the Cloudflare account of the original deployment; it is not a secret, since it only works inside that account. **If you fork Pendel-Pilot and deploy it yourself, you must replace it:** create your own namespace (dashboard: Storage & Databases → Workers KV → Create, the id is the last part of the namespace page's address; or `npx wrangler@4.107.0 kv namespace create pendel-pilot-access`) and put its id into `wrangler.toml`. With an id from another account the deployment fails. Bindings set in the dashboard are ignored while `wrangler.toml` exists.
 2. Set your admin code as a secret, a long random one (e.g. `openssl rand -base64 24`): `npx wrangler@4.107.0 pages secret put ADMIN_CODE --project-name pendel-pilot`. Add `--env preview` to protect the preview addresses too; without it they stay open.
 3. Deploy. Open the site, enter the admin code once; you land in Settings, where the section "Share access" appears (only for you).
 
@@ -85,7 +85,7 @@ Pendel-Pilot can be limited to invited people without user accounts. It is off u
 
 **Revoking:** tap "Revoke" next to the name. It takes effect within about a minute (KV edge cache). Changing `ADMIN_CODE` logs the admin out everywhere; guests keep their access.
 
-Locally: put `ADMIN_CODE=...` into `.dev.vars` and run `npx wrangler@4.107.0 pages dev dist --kv ACCESS` (or uncomment the KV block).
+Locally: put `ADMIN_CODE=...` into `.dev.vars` and run `npm run dev:pages`; Wrangler simulates the KV namespace on your machine.
 
 ## Contributing
 

@@ -77,7 +77,7 @@ Optional and off until the secret `ADMIN_CODE` is set. `functions/_middleware.ts
 
 - `/join/<code>` (link or QR code) and `POST /join` (the code form, which also accepts a pasted link) set the `HttpOnly` cookie `pp_access` for 400 days and redirect: guests to `/`, the admin (who enters `ADMIN_CODE`) to `/settings#access`.
 - Pages and `/api/*` need a valid cookie; without one, pages show a self-contained code page (`src/access/loginPage.ts`) and `/api` answers 401 `ACCESS_REQUIRED`, upon which the UI goes to `/join`. Other static files stay public.
-- Invitations live in the KV namespace bound as `ACCESS` (`src/access/store.ts`): `grant:<id>` holds name, dates and the SHA-256 of the code's secret part (the code is `<id>.<secret>`, shown only once); `seen:<id>` holds the last use, written at most once a day per device (cookie `pp_seen`), kept apart so a late write cannot revive a revoked invitation. Invitations are read with a 60 s edge cache, so revoking takes up to a minute. Expired invitations are refused and removed by KV.
+- Invitations live in the KV namespace bound as `ACCESS` in `wrangler.toml` (`src/access/store.ts`; the id there is the original deployment's, a fork that deploys itself replaces it with its own): `grant:<id>` holds name, dates and the SHA-256 of the code's secret part (the code is `<id>.<secret>`, shown only once); `seen:<id>` holds the last use, written at most once a day per device (cookie `pp_seen`), kept apart so a late write cannot revive a revoked invitation. Invitations are read with a 60 s edge cache, so revoking takes up to a minute. Expired invitations are refused and removed by KV.
 - The admin cookie holds a hash of `ADMIN_CODE`; changing it logs the admin out.
 
 | Endpoint | Who | Result |
