@@ -60,7 +60,11 @@ export function AccessShareSection({ language }: { language: Language }) {
     onSuccess: (result) => {
       setCreated(result);
       setName("");
-      void queryClient.invalidateQueries({ queryKey: ACCESS_GRANTS_KEY });
+      // Show the new invitation at once instead of waiting for the next load of the list.
+      queryClient.setQueryData<AccessGrant[]>(ACCESS_GRANTS_KEY, (list) => [
+        result.grant,
+        ...(list ?? []).filter((grant) => grant.id !== result.grant.id),
+      ]);
     },
   });
 

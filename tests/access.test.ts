@@ -24,6 +24,13 @@ class FakeKv implements KvNamespace {
   }
 }
 
+/** KV whose list() does not show anything yet, as Cloudflare's can right after a write. */
+class LaggingListKv extends FakeKv {
+  override async list() {
+    return { keys: [], list_complete: true };
+  }
+}
+
 const ADMIN_CODE = 'admin-secret-for-tests-1234';
 const ORIGIN = 'https://pendel.example';
 
@@ -191,5 +198,25 @@ describe('access by invitation', () => {
       );
       assert.equal(response.status, 400, JSON.stringify(body));
     }
+  });
+
+  it('lists new invitations even while KV list() lags behind', async () => {
+    const kv = new LaggingListKv();
+    const store = new GrantStore(kv);
+    const first = await store.create('Max', null);
+    const second = await store.create('Anna', 30);
+    assert.deepEqual((await store.list()).map((grant) => grant.name).sort(), ['Anna', 'Max']);
+    await store.markSeen(first.grant.id);
+    assert.ok((await store.list()).find((grant) => grant.name === 'Max')?.lastUsedAt);
+    assert.equal(await store.revoke(second.grant.id), true);
+    assert.deepEqual((await store.list()).map((grant) => grant.name), ['Max']);
+  });
+
+  it('still lists invitations made before the index existed', async () => {
+    const kv = new FakeKv();
+    const store = new GrantStore(kv);
+    await store.create('Alt', null);
+    kv.entries.delete('index:grants');
+    assert.deepEqual((await store.list()).map((grant) => grant.name), ['Alt']);
   });
 });

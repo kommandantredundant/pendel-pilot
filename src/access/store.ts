@@ -32,6 +32,11 @@ interface GrantRecord {
 }
 
 const GRANT_PREFIX = 'grant:';
+/**
+ * The admin list as one document. KV's list() can show new keys only after a delay, so the list is kept here,
+ * read and written with plain get/put by the admin (usually visible at once where it was written).
+ */
+const INDEX_KEY = 'index:grants';
 /** Last use per invitation, kept apart so a late write can never bring a revoked invitation back. */
 const SEEN_PREFIX = 'seen:';
 /** Invitations are read through the edge cache for this long, so a revocation takes up to a minute. */
@@ -96,6 +101,8 @@ export class GrantStore {
       // KV deletes expired invitations by itself (a day later; the check below already refuses them).
       ...(expiresAt ? { expiration: Math.floor(Date.parse(expiresAt) / 1000) + 24 * 3600 } : {})
     });
+    const index = await this.readIndex();
+    await this.writeIndex([...index.filter((entry) => entry.id !== id), publicFields(record)]);
     return { grant: { ...publicFields(record), lastUsedAt: null }, code: `${id}.${secret}` };
   }
 
@@ -123,21 +130,47 @@ export class GrantStore {
 
   /** All invitations that still work, newest first. */
   async list(): Promise<AccessGrant[]> {
-    const [grants, seen] = await Promise.all([this.listKeys(GRANT_PREFIX), this.listKeys(SEEN_PREFIX)]);
-    const lastSeen = new Map(seen.map((key) => [key.name.slice(SEEN_PREFIX.length), (key.metadata as { at?: string } | undefined)?.at ?? null]));
+    const byId = new Map((await this.readIndex()).map((entry) => [entry.id, entry]));
+    // Invitations from before the index existed: taken from list() once KV shows them, if they still exist.
+    for (const key of await this.listKeys(GRANT_PREFIX)) {
+      const meta = key.metadata as Omit<AccessGrant, 'lastUsedAt'> | undefined;
+      if (!meta || typeof meta.id !== 'string' || byId.has(meta.id)) continue;
+      if ((await this.kv.get(GRANT_PREFIX + meta.id)) !== null) byId.set(meta.id, meta);
+    }
     const now = this.now();
+    const grants = [...byId.values()].filter((entry) => !isExpired(entry.expiresAt, now));
+    const seen = await Promise.all(grants.map((entry) => this.kv.get(SEEN_PREFIX + entry.id)));
     return grants
-      .map((key) => key.metadata as Omit<AccessGrant, 'lastUsedAt'> | undefined)
-      .filter((meta): meta is Omit<AccessGrant, 'lastUsedAt'> => !!meta && typeof meta.id === 'string' && !isExpired(meta.expiresAt, now))
-      .map((meta) => ({ ...meta, lastUsedAt: lastSeen.get(meta.id) ?? null }))
+      .map((entry, i) => ({ ...entry, lastUsedAt: seen[i] }))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   /** Revokes an invitation. Returns false if there was none with this id. */
   async revoke(id: string): Promise<boolean> {
-    if (!/^[a-z2-9]{8}$/.test(id) || (await this.kv.get(GRANT_PREFIX + id)) === null) return false;
+    if (!/^[a-z2-9]{8}$/.test(id)) return false;
+    const index = await this.readIndex();
+    const exists = index.some((entry) => entry.id === id) || (await this.kv.get(GRANT_PREFIX + id)) !== null;
+    if (!exists) return false;
     await Promise.all([this.kv.delete(GRANT_PREFIX + id), this.kv.delete(SEEN_PREFIX + id)]);
+    await this.writeIndex(index.filter((entry) => entry.id !== id));
     return true;
+  }
+
+  private async readIndex(): Promise<Omit<AccessGrant, 'lastUsedAt'>[]> {
+    const raw = await this.kv.get(INDEX_KEY);
+    if (raw === null) return [];
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? (parsed as Omit<AccessGrant, 'lastUsedAt'>[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async writeIndex(entries: Omit<AccessGrant, 'lastUsedAt'>[]): Promise<void> {
+    // Expired invitations leave the index whenever it is written.
+    const now = this.now();
+    await this.kv.put(INDEX_KEY, JSON.stringify(entries.filter((entry) => !isExpired(entry.expiresAt, now))));
   }
 
   private async listKeys(prefix: string) {
