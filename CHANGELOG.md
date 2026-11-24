@@ -4,7 +4,7 @@ Publishing a GitHub release deploys that version to Cloudflare Pages (see README
 
 ## 0.4.1
 
-- **Invited people show up in the list:** in "Share access" the list of invited people stayed empty on the live site, because Cloudflare shows newly stored entries in its listings only after a delay. The list is now kept as one entry of its own, and a new invitation appears in it right away.
+- **Invited people show up in the list:** in "Share access" the list of invited people stayed empty on the live site: Cloudflare's listing of stored entries did not return them. The list is now kept as one entry of its own, and a new invitation appears in it right away. Invitations made with 0.4.0 keep working but may be missing from the list; invite those people again to see them there.
 
 ## 0.4.0
 
