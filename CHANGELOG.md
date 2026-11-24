@@ -2,7 +2,7 @@
 
 Publishing a GitHub release deploys that version to Cloudflare Pages (see README, "Releases and deployment").
 
-## Unreleased
+## 0.4.1
 
 - **Invited people show up in the list:** in "Share access" the list of invited people stayed empty on the live site, because Cloudflare shows newly stored entries in its listings only after a delay. The list is now kept as one entry of its own, and a new invitation appears in it right away.
 
